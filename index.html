@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flappy Multi-Sky Party</title>
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --primary: #FFD93D;
+        --secondary: #FF6B6B;
+        --accent: #4ECDC4;
+        --dark: #2C3E50;
+        --light: #F7F9FC;
+    }
+
+    body {
+        margin: 0;
+        overflow: hidden;
+        background: #333;
+        font-family: 'Fredoka', sans-serif;
+        touch-action: none;
+    }
+
+    #game-container {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); /* Day default */
+        overflow: hidden;
+        transition: background 2s ease;
+    }
+
+    canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* UI Overlay */
+    #ui-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 20;
+    }
+
+    .panel {
+        background: rgba(255, 255, 255, 0.95);
+        padding: 1.5rem;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        text-align: center;
+        pointer-events: auto;
+        max-width: 90%;
+        width: 340px;
+        max-height: 90vh;
+        overflow-y: auto;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+
+    .hidden {
+        display: none !important;
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    h1 {
+        color: var(--dark);
+        margin: 0 0 0.5rem 0;
+        font-size: 1.8rem;
+    }
+
+    h2 {
+        color: var(--secondary);
+        font-size: 1.4rem;
+        margin: 0.5rem 0;
+    }
+
+    h3 {
+        color: var(--dark);
+        font-size: 1.1rem;
+        margin: 10px 0 5px 0;
+        text-align: left;
+    }
+
+    label {
+        display: block;
+        text-align: left;
+        margin: 5px 0;
+        font-size: 0.9rem;
+        color: #555;
+    }
+
+    input[type="text"], input[type="number"], select {
+        width: 100%;
+        padding: 10px;
+        margin: 5px 0 10px 0;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: inherit;
+        box-sizing: border-box;
+        text-align: center;
+    }
+    
+    input[type="color"] {
+        width: 40px;
+        height: 40px;
+        border: none;
+        cursor: pointer;
+        background: none;
+        vertical-align: middle;
+    }
+
+    .color-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 5px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+
+    input:focus, select:focus {
+        border-color: var(--accent);
+        outline: none;
+    }
+
+    button {
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: transform 0.1s;
+        font-family: inherit;
+        color: white;
+    }
+
+    button:active { transform: scale(0.98); }
+
+    .btn-primary { background: var(--accent); }
+    .btn-secondary { background: var(--secondary); }
+    .btn-action { background: var(--primary); color: var(--dark); }
+
+    .score-display {
+        position: absolute;
+        top: 10%;
+        font-size: 4rem;
+        color: white;
+        text-shadow: 3px 3px 0px rgba(0,0,0,0.2);
+        pointer-events: none;
+        width: 100%;
+        text-align: center;
+        z-index: 10;
+    }
+    
+    .room-code {
+        font-family: monospace;
+        background: #eee;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-size: 1.2rem;
+        letter-spacing: 2px;
+        font-weight: bold;
+        color: var(--dark);
+        display: block;
+        margin: 10px auto;
+        width: fit-content;
+    }
+    
+    #notification-area {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 10px 20px;
+        border-radius: 20px;
+        font-size: 14px;
+        z-index: 100;
+        display: none;
+    }
+
+    .player-list {
+        text-align: left;
+        font-size: 0.9rem;
+        background: #f9f9f9;
+        padding: 10px;
+        border-radius: 10px;
+        margin: 10px 0;
+        max-height: 150px;
+        overflow-y: auto;
+    }
+
+    .player-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 4px 0;
+        border-bottom: 1px solid #eee;
+    }
+    .player-item:last-child { border-bottom: none; }
+    
+    .ranking-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0;
+    }
+    .ranking-table th, .ranking-table td {
+        padding: 8px;
+        text-align: center;
+        border-bottom: 1px solid #ddd;
+    }
+    .ranking-table th { background: #f0f0f0; }
+
+    /* Toggle Switch */
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 24px;
+        vertical-align: middle;
+        margin-left: 10px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+    .slider:before {
+        position: absolute;
+        content: "";
+        height: 16px;
+        width: 16px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--accent); }
+    input:checked + .slider:before { transform: translateX(26px); }
+
+</style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="world"></canvas>
+    <div id="score" class="score-display hidden">0</div>
+    <div id="notification-area"></div>
+
+    <div id="ui-layer">
+        <!-- Main Menu -->
+        <div id="menu-panel" class="panel">
+            <h1>Multi-Sky Party</h1>
+            <input type="text" id="player-name" placeholder="Enter Nickname (1-10 chars)" maxlength="10">
+            <button class="btn-primary" onclick="GameUI.showHostConfig()">Host Game</button>
+            <div style="margin: 10px 0; color: #888; font-size: 0.8rem;">- OR -</div>
+            <button class="btn-secondary" onclick="GameUI.showRoomsList()">Find Rooms</button>
+            <div style="margin: 10px 0; color: #888; font-size: 0.8rem;">- OR -</div>
+            <button class="btn-action" onclick="GameUI.showGlobalRankings()">Global Rankings</button>
+        </div>
+
+        <!-- Rooms List -->
+        <div id="rooms-panel" class="panel hidden">
+            <h2>Available Rooms</h2>
+            <button class="btn-action" onclick="GameUI.loadRooms()" style="margin-bottom: 10px; font-size: 0.9rem;">Refresh List</button>
+            <div id="rooms-list-container" style="max-height: 200px; overflow-y: auto; text-align: left;">
+                <p>Loading rooms...</p>
+            </div>
+            
+            <div style="margin: 15px 0; border-top: 1px solid #ccc; padding-top: 10px;">
+                <label style="text-align: center;">Manual Join</label>
+                <input type="text" id="room-input" placeholder="Room Code" style="text-transform: uppercase;">
+                <button class="btn-primary" onclick="GameApp.joinGame()">Join by Code</button>
+            </div>
+            <button class="btn-secondary" onclick="GameUI.showMenu()">Back</button>
+        </div>
+
+        <!-- Host Configuration -->
+        <div id="host-config-panel" class="panel hidden">
+            <h2>Game Settings</h2>
+            
+            <label>
+                Start Speed (1.0 - 5.0)
+                <input type="number" id="cfg-speed" value="1.5" min="1.0" max="5.0" step="0.1">
+            </label>
+            
+            <label>
+                Auto Speed Up?
+                <label class="switch">
+                    <input type="checkbox" id="cfg-autospeed" checked>
+                    <span class="slider"></span>
+                </label>
+            </label>
+
+            <h3>Player Colors</h3>
+            <div id="color-config">
+                <!-- Colors generated by JS -->
+            </div>
+
+            <button class="btn-primary" onclick="GameApp.hostGame()">Create Lobby</button>
+            <button class="btn-secondary" onclick="GameUI.showMenu()">Back</button>
+        </div>
+
+        <!-- Lobby -->
+        <div id="lobby-panel" class="panel hidden">
+            <h2>Lobby <span id="lobby-count">(1/5)</span></h2>
+            <div id="display-room-code" class="room-code">...</div>
+            <div id="lobby-timer" style="color: var(--secondary); font-weight: bold; height: 20px;"></div>
+            
+            <div class="player-list" id="lobby-player-list">
+                <!-- Players -->
+            </div>
+
+            <div id="lobby-chat-box" style="height: 100px; overflow-y: auto; background: #fff; border: 1px solid #ddd; margin: 10px 0; text-align: left; padding: 5px; font-size: 0.8rem; border-radius: 5px;">
+                <div style="color: #888; font-style: italic;">Welcome to the chat! Keep it friendly.</div>
+            </div>
+            <div style="display:flex; margin-bottom: 10px;">
+                <input type="text" id="chat-input" placeholder="Type a message..." maxlength="50" style="flex:1; margin:0; font-size: 0.9rem;" onkeydown="if(event.key === 'Enter') GameApp.sendChat()">
+                <button class="btn-secondary" onclick="GameApp.sendChat()" style="width: auto; margin:0 0 0 5px; padding: 0 15px; font-size: 0.9rem;">Send</button>
+            </div>
+
+            <button id="start-btn" class="btn-primary hidden" onclick="GameApp.requestStart()">Start Now</button>
+            <button class="btn-secondary" onclick="location.reload()">Leave</button>
+        </div>
+
+        <!-- Count Down -->
+        <div id="countdown-panel" class="panel hidden" style="background: transparent; box-shadow: none;">
+            <h1 id="countdown-text" style="font-size: 6rem; color: white; text-shadow: 0 4px 10px rgba(0,0,0,0.3);">3</h1>
+        </div>
+
+        <!-- Game Over / Ranking -->
+        <div id="ranking-panel" class="panel hidden">
+            <h2>🏆 Game Ranking 🏆</h2>
+            <table class="ranking-table">
+                <thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>
+                <tbody id="ranking-body"></tbody>
+            </table>
+            <button class="btn-primary" onclick="GameApp.rematch()">Rematch</button>
+            <button class="btn-secondary" onclick="location.reload()">Main Menu</button>
+        </div>
+
+        <!-- Global Rankings -->
+        <div id="global-rankings-panel" class="panel hidden">
+            <h2>🌍 Global Rankings</h2>
+            <div style="display: flex; gap: 5px; margin-bottom: 10px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn-action" style="padding: 5px 10px; width: auto; font-size: 0.8rem;" onclick="GameUI.renderGlobalRanking('overall')">Overall</button>
+                <button class="btn-action" style="padding: 5px 10px; width: auto; font-size: 0.8rem;" onclick="GameUI.renderGlobalRanking('monthly')">Monthly</button>
+                <button class="btn-action" style="padding: 5px 10px; width: auto; font-size: 0.8rem;" onclick="GameUI.renderGlobalRanking('weekly')">Weekly</button>
+                <button class="btn-action" style="padding: 5px 10px; width: auto; font-size: 0.8rem;" onclick="GameUI.renderGlobalRanking('daily')">Daily</button>
+            </div>
+            <h3 id="ranking-tab-title" style="text-align: center; text-transform: capitalize;">Overall</h3>
+            <div style="max-height: 250px; overflow-y: auto;">
+                <table class="ranking-table">
+                    <thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>
+                    <tbody id="global-ranking-body"></tbody>
+                </table>
+            </div>
+            <button class="btn-secondary" onclick="GameUI.showMenu()">Back</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Configuration & State
+ */
+const CONFIG = {
+    gravity: 0.45,
+    baseJump: -6.5,
+    basePipeGap: 170, // Slightly wider for fairness
+    baseSpawnRate: 150,
+    maxPlayers: 5
+};
+
+const COLORS_DEFAULT = ['#FFD93D', '#FF6B6B', '#4ECDC4', '#A8E6CF', '#FF8B94'];
+
+const BAD_WORDS = ['fuck','shit','bitch','ass','cunt','dick','cock','pussy','whore','slut','nigger','nigga','fag'];
+function validateText(text, isName=false) {
+    if (isName) {
+        if (!/^[a-zA-Z0-9]{1,10}$/.test(text)) return "Must be 1-10 letters/numbers only, no spaces.";
+    }
+    const lower = text.toLowerCase();
+    if (BAD_WORDS.some(bw => lower.includes(bw))) return "Contains prohibited words.";
+    return null;
+}
+
+function filterChat(text) {
+    let safe = text;
+    BAD_WORDS.forEach(bw => {
+        const regex = new RegExp(bw, 'gi');
+        safe = safe.replace(regex, '***');
+    });
+    return safe;
+}
+
+let audioCtx = null;
+const SoundFX = {
+    init: () => {
+        if (!audioCtx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            audioCtx = new AC();
+        }
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    },
+    playJump: () => {
+        if(!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.1);
+    },
+    playScore: () => {
+        if(!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.2);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+    },
+    playDie: () => {
+        if(!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+    }
+};
+
+/**
+ * Game Engine
+ */
+class GameEngine {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+
+        this.state = 'MENU'; 
+        this.birds = new Map(); // id -> Bird Object
+        this.pipes = [];
+        this.clouds = [];
+        this.particles = [];
+        
+        this.score = 0;
+        this.highScore = parseInt(localStorage.getItem('flappy_highscore') || '0');
+        
+        // Dynamic Settings
+        this.gameSpeed = 1.0; 
+        this.currentPipeGap = CONFIG.basePipeGap;
+        this.isNight = false;
+        
+        this.initClouds();
+
+        // Loop
+        this.lastTime = 0;
+        this.frameCount = 0;
+        this.loop = this.loop.bind(this);
+        requestAnimationFrame(this.loop);
+
+        // Input
+        this.handleInput = this.handleInput.bind(this);
+        window.addEventListener('touchstart', (e) => { 
+            if (['INPUT','BUTTON','LABEL'].includes(e.target.tagName)) return;
+            e.preventDefault(); 
+            this.handleInput(); 
+        }, { passive: false });
+        window.addEventListener('mousedown', (e) => {
+            if (['INPUT','BUTTON','LABEL'].includes(e.target.tagName)) return;
+            this.handleInput();
+        });
+        window.addEventListener('keydown', (e) => { if(e.code === 'Space') this.handleInput(); });
+    }
+
+    resize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+    }
+
+    initClouds() {
+        this.clouds = [];
+        for(let i=0; i<6; i++) {
+            this.clouds.push({
+                x: Math.random() * this.canvas.width,
+                y: Math.random() * this.canvas.height * 0.5,
+                w: 60 + Math.random() * 80,
+                speed: 0.2 + Math.random() * 0.3
+            });
+        }
+    }
+
+    setTheme(isNight) {
+        this.isNight = isNight;
+        const container = document.getElementById('game-container');
+        if (isNight) {
+            container.style.background = "linear-gradient(to bottom, #0f2027, #203a43, #2c5364)"; // Night
+        } else {
+            container.style.background = "linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%)"; // Day
+        }
+    }
+
+    addBird(id, name, color, isLocal) {
+        this.birds.set(id, {
+            id, name, isLocal, color,
+            x: this.canvas.width * 0.15,
+            y: this.canvas.height / 2,
+            velocity: 0,
+            rotation: 0,
+            dead: false,
+            score: 0,
+            rank: 0,
+            finished: false
+        });
+    }
+
+    reset(settings) {
+        this.birds.forEach(bird => {
+            bird.y = this.canvas.height / 2;
+            bird.velocity = 0;
+            bird.rotation = 0;
+            bird.dead = false;
+            bird.finished = false;
+            bird.score = 0;
+        });
+        this.pipes = [];
+        this.particles = [];
+        this.score = 0;
+        this.frameCount = 0;
+        this.gameSpeed = settings.startSpeed || 1.5;
+        this.autoSpeed = settings.autoSpeed;
+        this.setTheme(false);
+        document.getElementById('score').innerText = '0';
+        document.getElementById('score').classList.remove('hidden');
+    }
+
+    handleInput() {
+        if (this.state !== 'PLAYING') return;
+        const bird = this.birds.get(GameApp.myId);
+        if (bird && !bird.dead) {
+            const now = performance.now();
+            if (!bird.lastJumpTime) bird.lastJumpTime = 0;
+            const timeSinceLastJump = now - bird.lastJumpTime;
+            bird.lastJumpTime = now;
+
+            // Faster clicks = steeper ascent (velocity stacks instead of replacing)
+            if (timeSinceLastJump < 250) {
+                bird.velocity = Math.max(-10, bird.velocity + CONFIG.baseJump * 0.8);
+            } else {
+                bird.velocity = CONFIG.baseJump;
+            }
+
+            SoundFX.playJump();
+            
+            // Broadcast MY jump to everyone (if host) or to host (if client)
+            if (GameApp.isHost) {
+                // As host, I just update myself and broadcast my new state
+                GameApp.broadcast({ type: 'UPDATE_BIRD', id: bird.id, y: bird.y, v: bird.velocity });
+            } else {
+                // As client, I ask host to relay my jump
+                GameApp.sendToHost({ type: 'INPUT', id: bird.id, v: bird.velocity });
+            }
+        }
+    }
+
+    loop(timestamp) {
+        const dt = (timestamp - this.lastTime) / 1000;
+        this.lastTime = timestamp;
+
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        this.updateClouds();
+        this.drawClouds();
+
+        if (this.state === 'PLAYING') {
+            this.updatePhysics();
+            if (GameApp.isHost) this.updatePipes();
+            this.updateParticles();
+        }
+
+        this.drawPipes();
+        this.drawBirds();
+        this.drawParticles();
+
+        requestAnimationFrame(this.loop);
+    }
+
+    updateClouds() {
+        this.clouds.forEach(c => {
+            c.x -= c.speed;
+            if (c.x + c.w < -50) c.x = this.canvas.width + 50;
+        });
+    }
+
+    drawClouds() {
+        this.ctx.fillStyle = this.isNight ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.4)';
+        this.clouds.forEach(cloud => {
+            this.ctx.beginPath();
+            this.ctx.arc(cloud.x, cloud.y, cloud.w/2, 0, Math.PI * 2);
+            this.ctx.arc(cloud.x + cloud.w/3, cloud.y - cloud.w/4, cloud.w/2.5, 0, Math.PI * 2);
+            this.ctx.fill();
+        });
+    }
+
+    updatePhysics() {
+        // Physics for all birds (Client simulates all for smoothness, but authority is Host)
+        this.birds.forEach(bird => {
+            if (bird.dead) {
+                if (bird.y < this.canvas.height + 50) {
+                    bird.y += 10; 
+                    bird.rotation += 0.1;
+                }
+                return;
+            }
+
+            bird.velocity += CONFIG.gravity;
+            bird.y += bird.velocity;
+
+            // Rotation
+            const targetRot = Math.min(Math.PI / 3, Math.max(-Math.PI / 3, (bird.velocity * 0.1)));
+            bird.rotation = bird.rotation * 0.8 + targetRot * 0.2;
+
+            // Bounds
+            if (bird.y < 0) { bird.y = 0; bird.velocity = 0; }
+            if (bird.y > this.canvas.height) this.killBird(bird.id);
+        });
+        
+        // Host collisions
+        if (GameApp.isHost) {
+            this.checkCollisions();
+        }
+
+        this.frameCount++;
+    }
+
+    killBird(id) {
+        const bird = this.birds.get(id);
+        if (!bird.dead) {
+            bird.dead = true;
+            if (id === GameApp.myId) SoundFX.playDie();
+            // Create death particles
+            for(let i=0; i<10; i++) {
+                this.particles.push({
+                    x: bird.x, y: bird.y,
+                    vx: (Math.random()-0.5)*10, vy: (Math.random()-0.5)*10,
+                    life: 1.0, color: bird.color
+                });
+            }
+            
+            if (GameApp.isHost) {
+                // Host decides death
+                GameApp.broadcast({ type: 'BIRD_DIED', id: id, score: this.score });
+                this.checkGameOver();
+            }
+        }
+    }
+
+    checkGameOver() {
+        const alive = Array.from(this.birds.values()).filter(b => !b.dead);
+        if (alive.length === 0) {
+            setTimeout(() => {
+                const ranking = Array.from(this.birds.values())
+                    .map(b => ({ id: b.id, name: b.name, score: b.score || this.score }))
+                    .sort((a,b) => b.score - a.score); 
+                    
+                GameApp.broadcast({ type: 'GAME_OVER', ranking });
+                GameApp.handleGameOver(ranking);
+            }, 1000);
+        }
+    }
+
+    updatePipes() {
+        const effectiveSpeed = 3 * this.gameSpeed;
+        const spawnInterval = Math.floor(CONFIG.baseSpawnRate / this.gameSpeed);
+
+        if (this.frameCount % spawnInterval === 0) {
+            this.spawnPipe();
+        }
+
+        this.pipes.forEach(p => {
+            p.x -= effectiveSpeed;
+            
+            // Score Logic (Global world score)
+            if (!p.passed && p.x + 60 < this.birds.get(GameApp.myId).x) {
+                p.passed = true;
+                this.score++;
+                SoundFX.playScore();
+                this.handleScoreEvents();
+                GameApp.broadcast({ type: 'SCORE_UPDATE', score: this.score });
+            }
+        });
+
+        if (this.pipes.length > 0 && this.pipes[0].x < -100) {
+            this.pipes.shift();
+        }
+    }
+    
+    spawnPipe() {
+        // Smart Pipe Logic
+        const gap = this.currentPipeGap; 
+        const minHeight = 50;
+        const maxHeight = this.canvas.height - minHeight - gap;
+        
+        let y;
+        if (this.pipes.length > 0) {
+            const lastY = this.pipes[this.pipes.length - 1].y;
+            const maxDelta = 200; // Allow 200px change over the gap.
+            
+            const minY = Math.max(minHeight, lastY - maxDelta);
+            const maxY_ = Math.min(maxHeight, lastY + maxDelta);
+            y = Math.random() * (maxY_ - minY) + minY;
+        } else {
+            y = Math.random() * (maxHeight - minHeight) + minHeight;
+        }
+        
+        const newPipe = { x: this.canvas.width, y: y, passed: false, gap: gap };
+        this.pipes.push(newPipe);
+        if (GameApp.isHost) GameApp.broadcast({ type: 'NEW_PIPE', pipe: newPipe });
+    }
+
+    handleScoreEvents() {
+        document.getElementById('score').innerText = this.score;
+
+        // Auto Speed Up
+        if (this.autoSpeed) {
+             // Speed up every 20 scores
+            if (this.score % 20 === 0) {
+                if (this.gameSpeed < 1.0) this.gameSpeed = 1.0;
+                // Sequence: 1.0, 1.1, 1.2... up to 5.0
+                this.gameSpeed = Math.min(5.0, this.gameSpeed + 0.1);
+                GameApp.broadcast({ type: 'SPEED_UPDATE', speed: this.gameSpeed });
+                GameApp.showNotification("Speed Up! " + this.gameSpeed.toFixed(1) + "x");
+            }
+        }
+
+        // Day/Night Cycle every 50 scores
+        if (this.score > 0 && this.score % 50 === 0) {
+            this.setTheme(!this.isNight);
+            GameApp.broadcast({ type: 'THEME_UPDATE', isNight: this.isNight });
+        }
+    }
+
+    checkCollisions() {
+        const radius = 12;
+        this.birds.forEach(bird => {
+            if (bird.dead) return;
+
+            // Pipes
+            for (let pipe of this.pipes) {
+                if (bird.x + radius > pipe.x && bird.x - radius < pipe.x + 60) {
+                    if (bird.y - radius < pipe.y || bird.y + radius > pipe.y + pipe.gap) {
+                        this.killBird(bird.id);
+                        bird.score = this.score; // Record score at death
+                    }
+                }
+            }
+        });
+    }
+
+    updateParticles() {
+        this.particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.5; // Gravity
+            p.life -= 0.02;
+        });
+        this.particles = this.particles.filter(p => p.life > 0);
+    }
+
+    drawBirds() {
+        this.birds.forEach(bird => {
+            this.ctx.save();
+            this.ctx.translate(bird.x, bird.y);
+            this.ctx.rotate(bird.rotation);
+
+            // Body
+            this.ctx.fillStyle = bird.color;
+            this.ctx.beginPath();
+            this.ctx.arc(0, 0, 18, 0, Math.PI * 2);
+            this.ctx.fill();
+            this.ctx.strokeStyle = '#fff';
+            this.ctx.lineWidth = 2;
+            this.ctx.stroke();
+
+            // Eye
+            this.ctx.fillStyle = 'white';
+            this.ctx.beginPath();
+            this.ctx.arc(8, -6, 8, 0, Math.PI*2);
+            this.ctx.fill();
+            this.ctx.fillStyle = 'black';
+            this.ctx.beginPath();
+            this.ctx.arc(10, -6, 3, 0, Math.PI*2);
+            this.ctx.fill();
+
+            // Wing
+            this.ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(-6, 4, 8, 5, 0, 0, Math.PI*2);
+            this.ctx.fill();
+
+            // Beak
+            this.ctx.fillStyle = '#FF9F43';
+            this.ctx.beginPath();
+            this.ctx.moveTo(10, 2);
+            this.ctx.lineTo(24, 6);
+            this.ctx.lineTo(10, 10);
+            this.ctx.fill();
+
+            this.ctx.restore();
+
+            // Name
+            if (!bird.dead) {
+                this.ctx.font = 'bold 12px Fredoka';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillStyle = 'white';
+                this.ctx.strokeStyle = 'black';
+                this.ctx.lineWidth = 3;
+                this.ctx.strokeText(bird.name, bird.x, bird.y - 25);
+                this.ctx.fillText(bird.name, bird.x, bird.y - 25);
+            }
+        });
+    }
+
+    drawPipes() {
+        this.pipes.forEach(pipe => {
+            const pipeW = 60;
+            const grad = this.ctx.createLinearGradient(pipe.x, 0, pipe.x + pipeW, 0);
+            grad.addColorStop(0, '#55C855');
+            grad.addColorStop(0.2, '#73E073'); // Highlight
+            grad.addColorStop(0.5, '#43A047');
+            grad.addColorStop(1, '#2E7D32');
+            
+            const drawPipeSegment = (x, y, w, h) => {
+                this.ctx.fillStyle = grad;
+                this.ctx.fillRect(x, y, w, h);
+                this.ctx.strokeStyle = '#1E4620';
+                this.ctx.lineWidth = 4;
+                this.ctx.strokeRect(x, y, w, h);
+                
+                // Extra cartoon highlight
+                this.ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                this.ctx.fillRect(x + 5, y, 5, h);
+            };
+
+            // Top Body
+            drawPipeSegment(pipe.x, 0, pipeW, pipe.y - 20);
+            // Top Cap
+            drawPipeSegment(pipe.x - 4, pipe.y - 20, pipeW + 8, 20);
+
+            // Bottom Body
+            drawPipeSegment(pipe.x, pipe.y + pipe.gap + 20, pipeW, this.canvas.height);
+            // Bottom Cap
+            drawPipeSegment(pipe.x - 4, pipe.y + pipe.gap, pipeW + 8, 20);
+        });
+    }
+
+    drawParticles() {
+        this.particles.forEach(p => {
+            this.ctx.fillStyle = p.color;
+            this.ctx.globalAlpha = p.life;
+            this.ctx.beginPath();
+            this.ctx.arc(p.x, p.y, 5, 0, Math.PI*2);
+            this.ctx.fill();
+            this.ctx.globalAlpha = 1.0;
+        });
+    }
+}
+
+/**
+ * Application Logic
+ */
+const GameUI = {
+    populateColors: () => {
+        const container = document.getElementById('color-config');
+        container.innerHTML = '';
+        for(let i=0; i<CONFIG.maxPlayers; i++) {
+            const row = document.createElement('div');
+            row.className = 'color-row';
+            row.innerHTML = `
+                <span>${i===0 ? 'Host (You)' : 'Player ' + (i+1)}</span>
+                <input type="color" id="col-${i}" value="${COLORS_DEFAULT[i]}">
+            `;
+            container.appendChild(row);
+        }
+    },
+    
+    showHostConfig: () => {
+        const name = document.getElementById('player-name').value.trim();
+        const err = validateText(name, true);
+        if(err) return alert(err);
+        GameUI.populateColors();
+        document.getElementById('menu-panel').classList.add('hidden');
+        document.getElementById('host-config-panel').classList.remove('hidden');
+    },
+
+    showMenu: () => {
+        document.getElementById('host-config-panel').classList.add('hidden');
+        document.getElementById('rooms-panel').classList.add('hidden');
+        document.getElementById('global-rankings-panel').classList.add('hidden');
+        document.getElementById('menu-panel').classList.remove('hidden');
+    },
+
+    showRoomsList: () => {
+        const name = document.getElementById('player-name').value.trim();
+        const err = validateText(name, true);
+        if(err) return alert(err);
+        document.getElementById('menu-panel').classList.add('hidden');
+        document.getElementById('rooms-panel').classList.remove('hidden');
+        GameUI.loadRooms();
+    },
+
+    globalRankingsData: null,
+
+    showGlobalRankings: async () => {
+        document.getElementById('menu-panel').classList.add('hidden');
+        document.getElementById('global-rankings-panel').classList.remove('hidden');
+        const body = document.getElementById('global-ranking-body');
+        body.innerHTML = '<tr><td colspan="3">Loading...</td></tr>';
+        
+        try {
+            const res = await fetch('/api/rankings');
+            if (res.ok) {
+                GameUI.globalRankingsData = await res.json();
+                GameUI.renderGlobalRanking('overall');
+            } else {
+                body.innerHTML = '<tr><td colspan="3">Failed to load</td></tr>';
+            }
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="3">Error loading</td></tr>';
+        }
+    },
+
+    renderGlobalRanking: (type) => {
+        if (!GameUI.globalRankingsData) return;
+        document.getElementById('ranking-tab-title').innerText = type;
+        const data = GameUI.globalRankingsData[type] || [];
+        const body = document.getElementById('global-ranking-body');
+        body.innerHTML = '';
+        if (data.length === 0) {
+            body.innerHTML = '<tr><td colspan="3">No rankings yet.</td></tr>';
+            return;
+        }
+        data.forEach((r, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${idx+1}</td><td>${r.name}</td><td>${r.score}</td>`;
+            body.appendChild(tr);
+        });
+    },
+
+    loadRooms: async () => {
+        const container = document.getElementById('rooms-list-container');
+        container.innerHTML = '<p>Loading rooms...</p>';
+        try {
+            const res = await fetch('/api/rooms');
+            if (!res.ok) throw new Error("Failed to load");
+            const rooms = await res.json();
+            
+            if (rooms.length === 0) {
+                container.innerHTML = '<p>No active rooms found.</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            rooms.forEach(room => {
+                const div = document.createElement('div');
+                div.style.padding = '10px';
+                div.style.borderBottom = '1px solid #eee';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                
+                div.innerHTML = `
+                    <div>
+                        <strong>${room.hostName}'s Room</strong><br>
+                        <small style="color:#666">Code: ${room.id}</small>
+                    </div>
+                    <button class="btn-primary" style="width: auto; padding: 5px 15px; margin: 0; font-size: 0.9rem;" onclick="GameUI.joinRoom('${room.id}')">Join</button>
+                `;
+                container.appendChild(div);
+            });
+        } catch (e) {
+            container.innerHTML = '<p style="color: red;">Error loading rooms</p>';
+        }
+    },
+    
+    joinRoom: (roomId) => {
+        document.getElementById('room-input').value = roomId;
+        GameApp.joinGame();
+    },
+
+    updateLobby: (players) => {
+        const list = document.getElementById('lobby-player-list');
+        list.innerHTML = '';
+        players.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'player-item';
+            div.innerHTML = `<span>${p.name}</span><span style="color:${p.color}">●</span>`;
+            list.appendChild(div);
+        });
+        document.getElementById('lobby-count').innerText = `(${players.length}/${CONFIG.maxPlayers})`;
+        
+        if (GameApp.isHost) {
+            document.getElementById('start-btn').classList.remove('hidden');
+        }
+    },
+    
+    addChatMessage: (sender, text, color) => {
+        const box = document.getElementById('lobby-chat-box');
+        const div = document.createElement('div');
+        div.style.marginBottom = '4px';
+        div.innerHTML = `<strong style="color:${color}">${sender}:</strong> <span>${filterChat(text)}</span>`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    }
+};
+
+const GameApp = {
+    engine: null,
+    peer: null,
+    myId: null,
+    myName: '',
+    isHost: false,
+    connections: [], // Host stores all client connections
+    hostConnection: null, // Client stores host connection
+    players: [], // List of {id, name, color}
+    hostSettings: {},
+    waitTimer: null,
+    
+    init() {
+        SoundFX.init();
+        this.engine = new GameEngine('world');
+        
+        // Setup sound interaction requirement
+        const enableSound = () => { SoundFX.init(); window.removeEventListener('click', enableSound); };
+        window.addEventListener('click', enableSound);
+    },
+    
+    showNotification(msg) {
+        const el = document.getElementById('notification-area');
+        el.innerText = msg;
+        el.style.display = 'block';
+        setTimeout(() => el.style.display = 'none', 3000);
+    },
+    
+    sendChat() {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text) return;
+        
+        const err = validateText(text);
+        if (err) {
+            alert(err);
+            return;
+        }
+        
+        input.value = '';
+        const myPlayer = this.players.find(p => p.id === this.myId) || { name: this.myName, color: '#333' };
+        
+        if (this.isHost) {
+            GameUI.addChatMessage(myPlayer.name, text, myPlayer.color);
+            this.broadcast({ type: 'CHAT', sender: myPlayer.name, text: text, color: myPlayer.color });
+        } else {
+            this.sendToHost({ type: 'CHAT', sender: myPlayer.name, text: text, color: myPlayer.color });
+        }
+    },
+
+    hostGame() {
+        this.myName = document.getElementById('player-name').value.trim();
+        this.isHost = true;
+        
+        // Gather settings
+        this.hostSettings = {
+            startSpeed: parseFloat(document.getElementById('cfg-speed').value),
+            autoSpeed: document.getElementById('cfg-autospeed').checked,
+            colors: []
+        };
+        for(let i=0; i<CONFIG.maxPlayers; i++) {
+            this.hostSettings.colors.push(document.getElementById(`col-${i}`).value);
+        }
+
+        const code = Math.random().toString(36).substr(2, 4).toUpperCase();
+        this.peer = new Peer(code);
+        
+        this.peer.on('open', async (id) => {
+            this.myId = 'host';
+            document.getElementById('host-config-panel').classList.add('hidden');
+            document.getElementById('lobby-panel').classList.remove('hidden');
+            document.getElementById('display-room-code').innerText = id;
+            
+            // Add self
+            this.players = [{ id: 'host', name: this.myName, color: this.hostSettings.colors[0] }];
+            GameUI.updateLobby(this.players);
+
+            // Register room
+            try {
+                await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roomId: id, hostName: this.myName })
+                });
+            } catch (e) { console.error("Error registering room"); }
+        });
+
+        this.peer.on('connection', (conn) => {
+            if (this.players.length >= CONFIG.maxPlayers) {
+                conn.send({ type: 'ERROR', msg: 'Room Full' });
+                setTimeout(() => conn.close(), 500);
+                return;
+            }
+
+            this.connections.push(conn);
+            conn.on('open', () => {
+                const color = this.hostSettings.colors[this.players.length];
+                conn.send({ type: 'WELCOME', players: this.players, myColor: color });
+            });
+            conn.on('data', (data) => this.handleHostData(conn, data));
+            conn.on('close', () => {
+                this.connections = this.connections.filter(c => c !== conn);
+                this.players = this.players.filter(p => p.conn !== conn); // Remove player
+                this.broadcastLobby();
+            });
+        });
+    },
+
+    joinGame() {
+        this.myName = document.getElementById('player-name').value.trim();
+        const code = document.getElementById('room-input').value.trim().toUpperCase();
+        if(!this.myName || !code) return alert("Name and Room Code required!");
+
+        this.peer = new Peer();
+        this.peer.on('open', (id) => {
+            this.myId = id;
+            const conn = this.peer.connect(code);
+            this.hostConnection = conn;
+            
+            conn.on('open', () => {
+                document.getElementById('menu-panel').classList.add('hidden');
+                document.getElementById('rooms-panel').classList.add('hidden');
+                document.getElementById('lobby-panel').classList.remove('hidden');
+                document.getElementById('display-room-code').innerText = code;
+                conn.send({ type: 'JOIN', name: this.myName });
+            });
+            
+            conn.on('data', (data) => this.handleClientData(data));
+            conn.on('close', () => alert("Host disconnected"));
+        });
+    },
+
+    // Host Logic
+    handleHostData(conn, data) {
+        switch(data.type) {
+            case 'JOIN':
+                const newPlayer = {
+                    id: conn.peer,
+                    name: data.name,
+                    color: this.hostSettings.colors[this.players.length], 
+                    conn: conn
+                };
+                this.players.push(newPlayer);
+                this.broadcastLobby();
+                break;
+            case 'INPUT':
+                // Client Jump
+                const bird = this.engine.birds.get(data.id);
+                if (bird) {
+                    bird.velocity = data.v || CONFIG.baseJump;
+                    // Relay to all
+                    this.broadcast({ type: 'UPDATE_BIRD', id: bird.id, y: bird.y, v: bird.velocity });
+                }
+                break;
+            case 'CHAT':
+                GameUI.addChatMessage(data.sender, data.text, data.color);
+                this.broadcast({ type: 'CHAT', sender: data.sender, text: data.text, color: data.color });
+                break;
+            case 'REMATCH_REQ':
+                this.broadcast({ type: 'REMATCH_ACCEPT' });
+                this.restartGame();
+                break;
+        }
+    },
+
+    broadcastLobby() {
+        const cleanList = this.players.map(p => ({ id: p.id, name: p.name, color: p.color }));
+        GameUI.updateLobby(cleanList);
+        this.broadcast({ type: 'LOBBY_UPDATE', players: cleanList });
+    },
+
+    broadcast(data) {
+        this.connections.forEach(c => {
+            if(c.open) c.send(data);
+        });
+    },
+
+    async unregisterRoom() {
+        if (!this.isHost) return;
+        const code = document.getElementById('display-room-code').innerText;
+        if (code && code !== '...') {
+            try {
+                await fetch(`/api/rooms?roomId=${code}`, { method: 'DELETE' });
+            } catch (e) { console.error(e); }
+        }
+    },
+
+    startWaitTimer() {
+        let timeLeft = 15;
+        const timerEl = document.getElementById('lobby-timer');
+        
+        this.waitTimer = setInterval(() => {
+            timeLeft--;
+            const msg = `Auto-starting in ${timeLeft}s...`;
+            timerEl.innerText = msg;
+            this.broadcast({ type: 'TIMER_UPDATE', msg });
+
+            if (timeLeft <= 0) {
+                clearInterval(this.waitTimer);
+                this.requestStart();
+            }
+        }, 1000);
+    },
+
+    requestStart() {
+        if (this.waitTimer) clearInterval(this.waitTimer);
+        this.unregisterRoom();
+        this.broadcast({ type: 'START_GAME', settings: this.hostSettings });
+        this.startGame(this.hostSettings);
+    },
+
+    // Client Logic
+    handleClientData(data) {
+        switch(data.type) {
+            case 'WELCOME':
+                // data.players is list, data.myColor is my assigned color
+                break;
+            case 'LOBBY_UPDATE':
+                this.players = data.players;
+                GameUI.updateLobby(this.players);
+                break;
+            case 'TIMER_UPDATE':
+                document.getElementById('lobby-timer').innerText = data.msg;
+                break;
+            case 'START_GAME':
+                this.startGame(data.settings);
+                break;
+            case 'UPDATE_BIRD':
+                const b = this.engine.birds.get(data.id);
+                if (b) {
+                    b.y = data.y;
+                    b.velocity = data.v;
+                }
+                break;
+            case 'NEW_PIPE':
+                this.engine.pipes.push(data.pipe);
+                break;
+            case 'SCORE_UPDATE':
+                this.engine.score = data.score;
+                this.engine.handleScoreEvents();
+                break;
+            case 'SPEED_UPDATE':
+                this.engine.gameSpeed = data.speed;
+                this.showNotification("Speed Up! " + data.speed.toFixed(1) + "x");
+                break;
+            case 'THEME_UPDATE':
+                this.engine.setTheme(data.isNight);
+                break;
+            case 'BIRD_DIED':
+                const deadB = this.engine.birds.get(data.id);
+                if (deadB) {
+                    deadB.dead = true;
+                    // Fix score if needed (remote bird death score)
+                    if (data.score) deadB.score = data.score;
+                }
+                break;
+            case 'GAME_OVER':
+                this.handleGameOver(data.ranking);
+                break;
+            case 'REMATCH_ACCEPT':
+                this.restartGame();
+                break;
+            case 'CHAT':
+                GameUI.addChatMessage(data.sender, data.text, data.color);
+                break;
+        }
+    },
+    
+    sendToHost(data) {
+        if (this.hostConnection && this.hostConnection.open) {
+            this.hostConnection.send(data);
+        }
+    },
+
+    // Shared Game Logic
+    startGame(settings) {
+        // Setup engine with players
+        this.engine.birds.clear();
+        this.players.forEach(p => {
+            this.engine.addBird(p.id, p.name, p.color, p.id === this.myId);
+        });
+        
+        document.getElementById('lobby-panel').classList.add('hidden');
+        document.getElementById('ranking-panel').classList.add('hidden');
+        document.getElementById('countdown-panel').classList.remove('hidden');
+
+        let count = 3;
+        const cEl = document.getElementById('countdown-text');
+        cEl.innerText = count;
+        
+        const cTimer = setInterval(() => {
+            count--;
+            if (count > 0) cEl.innerText = count;
+            else {
+                clearInterval(cTimer);
+                document.getElementById('countdown-panel').classList.add('hidden');
+                this.engine.reset(settings);
+                this.engine.state = 'PLAYING';
+            }
+        }, 1000);
+    },
+
+    handleGameOver(ranking) {
+        this.engine.state = 'GAMEOVER';
+        document.getElementById('score').classList.add('hidden');
+        document.getElementById('ranking-panel').classList.remove('hidden');
+        
+        const body = document.getElementById('ranking-body');
+        body.innerHTML = '';
+        ranking.forEach((r, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${idx+1}</td><td>${r.name}</td><td>${r.score}</td>`;
+            if (r.id === this.myId) {
+                tr.style.fontWeight = 'bold';
+                // Post my own score to global rankings
+                fetch('/api/rankings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: r.name, score: r.score })
+                }).catch(()=>{});
+            }
+            body.appendChild(tr);
+        });
+    },
+
+    rematch() {
+        if (this.isHost) {
+            this.restartGame();
+            this.broadcast({ type: 'REMATCH_ACCEPT' });
+        } else {
+            this.sendToHost({ type: 'REMATCH_REQ' });
+            this.showNotification("Waiting for host...");
+        }
+    },
+
+    restartGame() {
+        this.startGame(this.isHost ? this.hostSettings : {}); // Clients get settings via start message
+    }
+};
+
+// Initial Start
+GameApp.init();
+
+window.addEventListener('beforeunload', () => {
+    if (GameApp.isHost && GameApp.engine && GameApp.engine.state === 'MENU') {
+        const code = document.getElementById('display-room-code').innerText;
+        if (code && code !== '...') {
+            fetch(`/api/rooms?roomId=${code}`, { method: 'DELETE', keepalive: true }).catch(()=>{});
+        }
+    }
+});
+
+</script>
+</body>
+</html>
