@@ -40,37 +40,37 @@
     </div>
 
     <div id="host-config-panel" class="panel hidden">
-        <h1>Configurar Partida</h1>
-        <label>Velocidade:</label>
-        <input type="number" id="cfg-speed" value="3" step="0.5">
-        <div style="display:flex; gap:5px; margin:10px 0; justify-content:center;">
+        <h1>Nova Partida</h1>
+        <label>Velocidade do Jogo:</label>
+        <input type="range" id="cfg-speed" min="2" max="6" value="3" step="0.5">
+        <div style="display:flex; gap:5px; margin:15px 0; justify-content:center;">
             <input type="color" id="col-0" value="#FFD93D">
             <input type="color" id="col-1" value="#FF6B6B">
             <input type="color" id="col-2" value="#4ECDC4">
         </div>
         <button onclick="GameApp.hostGame()">Abrir Sala</button>
-        <button onclick="location.reload()" style="background:#aaa">Voltar</button>
+        <button onclick="location.reload()" style="background:#aaa">Cancelar</button>
     </div>
 
     <div id="rooms-panel" class="panel hidden">
-        <h1>Salas Disponíveis</h1>
+        <h1>Salas Ativas</h1>
         <div id="rooms-list-container" style="max-height: 200px; overflow-y: auto;"></div>
-        <button onclick="location.reload()">Sair</button>
+        <button onclick="location.reload()">Voltar</button>
     </div>
 
     <div id="lobby-panel" class="panel hidden">
         <h1>Sala: <span id="display-room-code">----</span></h1>
         <div id="lobby-player-list"></div>
         <div id="lobby-chat-box"></div>
-        <input type="text" id="chat-input" placeholder="Diga algo...">
-        <button id="start-btn" class="hidden" onclick="GameApp.requestStart()" style="background: var(--secondary)">INICIAR AGORA</button>
+        <input type="text" id="chat-input" placeholder="Conversar...">
+        <button id="start-btn" onclick="GameApp.requestStart()" style="background: var(--secondary)">INICIAR JOGO</button>
     </div>
 
     <div id="ranking-panel" class="panel hidden">
         <h1>Fim de Jogo!</h1>
-        <div id="ranking-results" style="margin-bottom: 15px;"></div>
-        <button onclick="GameApp.rematch()" style="background: var(--secondary)">Jogar de Novo</button>
-        <button onclick="location.reload()">Sair</button>
+        <div id="ranking-results" style="margin-bottom: 15px; font-weight: bold; font-size: 1.2rem;"></div>
+        <button onclick="GameApp.rematch()" style="background: var(--secondary)">Jogar Novamente</button>
+        <button onclick="location.reload()">Sair da Sala</button>
     </div>
 </div>
 
@@ -93,9 +93,9 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 /* ==========================================
-   MOTOR DO JOGO
+   MOTOR DO JOGO (ENGINE)
    ========================================== */
-const CONFIG = { gravity: 0.22, jump: -5.5, pipeWidth: 60, pipeGap: 165 };
+const CONFIG = { gravity: 0.22, jump: -5.5, pipeWidth: 65, pipeGap: 165 };
 
 class Bird {
     constructor(id, name, color) {
@@ -106,13 +106,23 @@ class Bird {
         if (this.dead) return;
         this.v += CONFIG.gravity;
         this.y += this.v;
+        // Colisão com chão e teto
+        if (this.y < 0 || this.y > GameEngine.canvas.height) {
+            this.dead = true;
+            GameApp.handleBirdDeath(this.id);
+        }
     }
     draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(Math.min(Math.PI/4, Math.max(-Math.PI/4, this.v * 0.1)));
         ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x, this.y, 15, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 0, 15, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = "white"; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+        
         ctx.fillStyle = "white"; ctx.font = "bold 12px Arial"; ctx.textAlign = "center";
-        ctx.fillText(this.name, this.x, this.y - 22);
+        ctx.fillText(this.name, this.x, this.y - 25);
     }
 }
 
@@ -128,7 +138,7 @@ const GameEngine = {
     },
     reset(speed) {
         this.pipes = []; this.score = 0; this.speed = speed || 3;
-        this.birds.forEach(b => { b.y = 250; b.v = 0; b.dead = false; b.score = 0; });
+        this.birds.forEach(b => { b.y = 250; b.v = 0; b.dead = false; });
         this.state = 'PLAYING';
     },
     update() {
@@ -138,15 +148,24 @@ const GameEngine = {
         if (GameApp.isHost) {
             this.pipes.forEach(p => {
                 p.x -= this.speed;
+                // Colisão Canos
                 this.birds.forEach(b => {
-                    if(!b.dead && (b.y < p.gapY || b.y > p.gapY + CONFIG.pipeGap) && b.x > p.x && b.x < p.x + CONFIG.pipeWidth) {
+                    if(!b.dead && (b.y < p.gapY || b.y > p.gapY + CONFIG.pipeGap) && b.x + 10 > p.x && b.x - 10 < p.x + CONFIG.pipeWidth) {
                         b.dead = true;
-                        GameApp.broadcast({ type: 'DIE', id: b.id, score: this.score });
+                        GameApp.handleBirdDeath(b.id);
                     }
                 });
+                // Pontuação
+                if (!p.passed && p.x + CONFIG.pipeWidth < 50) {
+                    p.passed = true;
+                    this.score++;
+                    GameApp.broadcast({ type: 'SCORE', score: this.score });
+                }
             });
+            // Remover canos antigos e gerar novos
+            this.pipes = this.pipes.filter(p => p.x > -CONFIG.pipeWidth);
             if (this.pipes.length === 0 || this.pipes[this.pipes.length-1].x < this.canvas.width - 280) {
-                const p = { x: this.canvas.width, gapY: Math.random() * (this.canvas.height - 350) + 50 };
+                const p = { x: this.canvas.width, gapY: Math.random() * (this.canvas.height - 350) + 70, passed: false };
                 this.pipes.push(p);
                 GameApp.broadcast({ type: 'PIPE', p });
             }
@@ -191,7 +210,7 @@ const GameApp = {
     },
 
     joinGame(code) {
-        this.myName = document.getElementById('player-name').value || 'Player';
+        this.myName = document.getElementById('player-name').value || 'Jogador';
         this.peer = new Peer();
         this.peer.on('open', id => {
             this.myId = id;
@@ -208,28 +227,36 @@ const GameApp = {
 
     handleData(data, conn) {
         if (data.type === 'JOIN') {
-            const p = { id: conn.peer, name: data.name, color: document.getElementById('col-1').value, conn: conn };
+            const colors = [document.getElementById('col-1').value, document.getElementById('col-2').value, '#9b59b6'];
+            const p = { id: conn.peer, name: data.name, color: colors[this.players.length - 1] || '#34495e', conn: conn };
             this.players.push(p);
             this.broadcast({ type: 'LOBBY', players: this.players.map(x => ({id:x.id, name:x.name, color:x.color})) });
             GameUI.updateLobbyList();
         }
         if (data.type === 'LOBBY') { this.players = data.players; GameUI.updateLobbyList(); }
         if (data.type === 'START') { 
+            GameEngine.birds.clear();
             this.players.forEach(p => GameEngine.birds.set(p.id, new Bird(p.id, p.name, p.color)));
             GameEngine.reset(data.speed);
             document.getElementById('lobby-panel').classList.add('hidden');
+            document.getElementById('ranking-panel').classList.add('hidden');
         }
         if (data.type === 'PIPE') GameEngine.pipes.push(data.p);
-        if (data.type === 'DIE') { 
-            const b = GameEngine.birds.get(data.id); 
-            if(b) b.dead = true; 
-            if(data.id === this.myId) {
-                db.ref('rankings').push({ name: this.myName, score: data.score, date: firebase.database.ServerValue.TIMESTAMP });
-                document.getElementById('ranking-panel').classList.remove('hidden');
-                document.getElementById('ranking-results').innerText = `Você fez ${data.score} pontos!`;
-            }
+        if (data.type === 'SCORE') GameEngine.score = data.score;
+        if (data.type === 'DIE') {
+            const b = GameEngine.birds.get(data.id);
+            if(b) b.dead = true;
+            if(data.id === this.myId) this.showGameOver(data.score);
         }
         if (data.type === 'JUMP') { const b = GameEngine.birds.get(data.id); if(b) b.v = CONFIG.jump; }
+    },
+
+    handleBirdDeath(id) {
+        if (!this.isHost) return;
+        this.broadcast({ type: 'DIE', id: id, score: GameEngine.score });
+        const b = GameEngine.birds.get(id);
+        if(b) b.dead = true;
+        if(id === 'host') this.showGameOver(GameEngine.score);
     },
 
     broadcast(data) { this.connections.forEach(c => c.open && c.send(data)); },
@@ -237,9 +264,11 @@ const GameApp = {
     requestStart() {
         const speed = parseFloat(document.getElementById('cfg-speed').value);
         const startData = { type: 'START', speed: speed };
-        this.broadcast(startData);
-        this.handleData(startData);
-        db.ref('rooms/' + this.peer.id).remove(); 
+        if (this.isHost) {
+            this.broadcast(startData);
+            this.handleData(startData);
+            db.ref('rooms/' + this.peer.id).remove(); // Remove da lista pública para não entrar gente no meio do jogo
+        }
     },
 
     jump() {
@@ -250,33 +279,46 @@ const GameApp = {
             if (this.isHost) this.broadcast({ type: 'JUMP', id: this.myId });
             else this.hostConn.send({ type: 'JUMP', id: this.myId });
         }
+    },
+
+    showGameOver(finalScore) {
+        GameEngine.state = 'GAMEOVER';
+        document.getElementById('ranking-panel').classList.remove('hidden');
+        document.getElementById('ranking-results').innerText = `Pontuação Final: ${finalScore}`;
+        // Salva no Ranking Global
+        db.ref('rankings').push({ name: this.myName, score: finalScore, date: firebase.database.ServerValue.TIMESTAMP });
+    },
+
+    rematch() {
+        if (this.isHost) this.requestStart();
+        else alert("Aguarde o host iniciar uma nova partida.");
     }
 };
 
 const GameUI = {
     showHostConfig() { 
-        if(!document.getElementById('player-name').value) return alert("Digite seu nome!");
+        if(!document.getElementById('player-name').value) return alert("Digite seu apelido primeiro!");
         document.getElementById('menu-panel').classList.add('hidden'); 
         document.getElementById('host-config-panel').classList.remove('hidden'); 
     },
     setupLobby() {
         document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
         document.getElementById('lobby-panel').classList.remove('hidden');
+        this.updateLobbyList();
     },
     updateLobbyList() {
         const list = document.getElementById('lobby-player-list');
         list.innerHTML = GameApp.players.map(p => `<div class="player-item">${p.name} <span style="color:${p.color}">●</span></div>`).join('');
-        if (GameApp.isHost) document.getElementById('start-btn').classList.remove('hidden');
     },
     showRooms() {
         document.getElementById('menu-panel').classList.add('hidden');
         document.getElementById('rooms-panel').classList.remove('hidden');
         const container = document.getElementById('rooms-list-container');
-        container.innerHTML = "Buscando...";
+        container.innerHTML = "Procurando salas...";
         db.ref('rooms').once('value', snapshot => {
             const rooms = snapshot.val();
             container.innerHTML = "";
-            if(!rooms) container.innerHTML = "Nenhuma sala aberta.";
+            if(!rooms) container.innerHTML = "Nenhuma sala encontrada no momento.";
             for (let id in rooms) {
                 const btn = document.createElement('button');
                 btn.innerText = `Entrar na sala de ${rooms[id].host}`;
@@ -290,15 +332,23 @@ const GameUI = {
             let list = [];
             snap.forEach(c => { list.push(c.val()); });
             list.reverse();
-            let msg = "TOP 10 MUNDIAL:\n\n";
+            let msg = "🏆 TOP 10 GLOBAL 🏆\n\n";
             list.forEach((r, i) => msg += `${i+1}º ${r.name}: ${r.score} pts\n`);
             alert(msg);
         });
     }
 };
 
-window.addEventListener('mousedown', () => GameApp.jump());
-window.addEventListener('touchstart', (e) => { e.preventDefault(); GameApp.jump(); }, {passive: false});
+// Eventos de Pulo
+window.addEventListener('keydown', (e) => { if(e.code === 'Space') GameApp.jump(); });
+window.addEventListener('mousedown', (e) => { if(e.target.tagName !== 'BUTTON') GameApp.jump(); });
+window.addEventListener('touchstart', (e) => { 
+    if(e.target.tagName !== 'BUTTON') {
+        e.preventDefault(); 
+        GameApp.jump();
+    }
+}, {passive: false});
+
 GameEngine.init();
 </script>
 </body>
