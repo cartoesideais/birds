@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Sky Party - Mobile Edition</title>
+    <title>Flappy Sky Party - Pro Edition</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
@@ -12,121 +12,130 @@
     
     <style>
         :root {
-            --bg-grad: linear-gradient(180deg, #4facfe 0%, #00f2fe 100%);
-            --primary: #FFD93D;
-            --secondary: #FF6B6B;
-            --accent: #4ECDC4;
-            --dark: #2C3E50;
-            --glass: rgba(255, 255, 255, 0.9);
+            --primary: #FFD93D; --secondary: #FF6B6B; --accent: #4ECDC4;
+            --dark: #2C3E50; --glass: rgba(255, 255, 255, 0.95);
         }
 
-        body { margin: 0; overflow: hidden; background: #222; font-family: 'Fredoka', sans-serif; touch-action: none; user-select: none; }
-        #game-container { position: relative; width: 100vw; height: 100vh; background: var(--bg-grad); overflow: hidden; }
+        body { 
+            margin: 0; overflow: hidden; background: #222; 
+            font-family: 'Fredoka', sans-serif; touch-action: none; 
+        }
+
+        #game-container { 
+            position: relative; width: 100vw; height: 100vh; 
+            background: linear-gradient(180deg, #4facfe 0%, #00f2fe 100%);
+        }
+
         canvas { display: block; width: 100%; height: 100%; }
 
-        /* UI Moderna - Estilo App */
+        /* Centralização Absoluta do Layout */
+        .ui-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; z-index: 100;
+        }
+
         .ui-panel {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--glass); padding: 30px; border-radius: 25px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.2); text-align: center;
-            width: 85%; max-width: 400px; z-index: 100; border: 4px solid #fff;
+            background: var(--glass); padding: 30px; border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3); text-align: center;
+            width: 90%; max-width: 360px; pointer-events: auto;
+            border: 5px solid #fff; display: flex; flex-direction: column; gap: 10px;
         }
         
         .hidden { display: none !important; }
 
-        h1 { color: var(--secondary); margin: 0 0 20px 0; font-size: 2.2rem; text-shadow: 2px 2px #fff; }
+        h1 { color: var(--secondary); margin: 0 0 10px 0; font-size: 2rem; text-transform: uppercase; }
         
         button {
-            background: var(--accent); color: white; border: none; padding: 15px;
-            border-radius: 15px; font-size: 1.2rem; cursor: pointer; margin: 10px 0;
-            width: 100%; font-weight: 700; transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 5px 0 #39a69e;
+            background: var(--accent); color: white; border: none; padding: 16px;
+            border-radius: 18px; font-size: 1.1rem; cursor: pointer;
+            font-weight: 700; transition: 0.2s; box-shadow: 0 6px 0 #39a69e;
         }
-        button:active { transform: translateY(3px); box-shadow: 0 2px 0 #39a69e; }
+        button:active { transform: translateY(4px); box-shadow: 0 2px 0 #39a69e; }
         
         input {
-            width: 100%; padding: 15px; margin-bottom: 15px; border: 3px solid #eee;
-            border-radius: 15px; font-size: 1rem; text-align: center; outline: none;
+            width: 100%; padding: 15px; border: 3px solid #eee;
+            border-radius: 15px; font-size: 1rem; text-align: center; box-sizing: border-box;
         }
 
-        /* Notificações in-game */
-        #game-toast {
-            position: absolute; bottom: 10%; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.8); color: white; padding: 10px 25px;
-            border-radius: 50px; font-size: 0.9rem; z-index: 200; opacity: 0; transition: 0.3s;
+        /* Notificações flutuantes */
+        #toast {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            background: var(--dark); color: white; padding: 10px 20px;
+            border-radius: 30px; font-size: 0.8rem; opacity: 0; transition: 0.5s; z-index: 1000;
         }
 
-        /* Chat e Lobby */
-        #lobby-chat-box { height: 140px; overflow-y: auto; background: #fff; border-radius: 15px; padding: 10px; margin: 10px 0; border: 2px solid #eee; font-size: 0.9rem; }
-        .chat-input-row { display: flex; gap: 10px; }
-        
-        /* Ranking Abas */
-        .rank-tabs { display: flex; gap: 5px; margin-bottom: 15px; }
-        .rank-tabs button { padding: 8px; font-size: 0.7rem; box-shadow: none; margin: 0; }
-        .rank-list { max-height: 250px; overflow-y: auto; text-align: left; }
+        #lobby-chat-box { 
+            height: 120px; overflow-y: auto; background: #f9f9f9; 
+            border-radius: 12px; padding: 8px; font-size: 0.85rem; 
+            text-align: left; border: 1px solid #ddd;
+        }
+
+        .player-badge {
+            display: inline-block; padding: 5px 10px; background: #eee;
+            border-radius: 10px; margin: 3px; font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <div id="score" style="position: absolute; top: 30px; width: 100%; text-align: center; font-size: 4rem; color: white; font-weight: 700; text-shadow: 4px 4px 0 rgba(0,0,0,0.2); z-index: 10;">0</div>
+    <div id="toast">Aviso</div>
+    <div id="score" style="position: absolute; top: 40px; width: 100%; text-align: center; font-size: 5rem; color: white; font-weight: 700; text-shadow: 4px 4px 0 rgba(0,0,0,0.1); z-index: 10;">0</div>
     
     <canvas id="world"></canvas>
-    <div id="game-toast">Mensagem</div>
 
-    <div id="menu-panel" class="ui-panel">
-        <h1>Sky Party</h1>
-        <input type="text" id="player-name" placeholder="Como quer ser chamado?" maxlength="12">
-        <button onclick="GameUI.showConfig()" style="background: var(--secondary); box-shadow: 0 5px 0 #e65b5b;">CRIAR SALA</button>
-        <button onclick="GameUI.showRooms()">LISTA DE SALAS</button>
-        <button onclick="GameUI.showRankings()" style="background: var(--dark); box-shadow: 0 5px 0 #1a252f;">RANKINGS</button>
-    </div>
-
-    <div id="host-panel" class="ui-panel hidden">
-        <h1>Sua Cor</h1>
-        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px;">
-            <div onclick="GameUI.selCol('#FFD93D', this)" style="height:50px; background:#FFD93D; border-radius:10px; border:4px solid #fff; cursor:pointer;"></div>
-            <div onclick="GameUI.selCol('#FF6B6B', this)" style="height:50px; background:#FF6B6B; border-radius:10px; border:4px solid transparent; cursor:pointer;"></div>
-            <div onclick="GameUI.selCol('#4ECDC4', this)" style="height:50px; background:#4ECDC4; border-radius:10px; border:4px solid transparent; cursor:pointer;"></div>
+    <div class="ui-wrapper">
+        <div id="menu-panel" class="ui-panel">
+            <h1>Sky Party</h1>
+            <input type="text" id="player-name" placeholder="Seu Nome (sem palavrão)" maxlength="10">
+            <button onclick="GameUI.openHost()" style="background: var(--secondary); box-shadow: 0 6px 0 #d65555;">CRIAR SALA</button>
+            <button onclick="GameUI.listRooms()">SALAS ABERTAS</button>
+            <button onclick="GameUI.showRanking()" style="background: var(--dark); box-shadow: 0 6px 0 #151e26;">RANKING</button>
         </div>
-        <button onclick="GameApp.hostGame()">CONFIRMAR E ABRIR</button>
-        <button onclick="location.reload()" style="background:#aaa; box-shadow: 0 5px 0 #888;">VOLTAR</button>
-    </div>
 
-    <div id="rooms-panel" class="ui-panel hidden">
-        <h1>Salas Online</h1>
-        <div id="rooms-list" style="margin-bottom: 15px;"></div>
-        <button onclick="location.reload()" style="background:#aaa; box-shadow: 0 5px 0 #888;">VOLTAR</button>
-    </div>
-
-    <div id="lobby-panel" class="ui-panel hidden">
-        <h2 style="margin:0; color: var(--accent);">SALA: <span id="room-id-display">--</span></h2>
-        <div id="lobby-list" style="margin: 10px 0; font-weight: bold;"></div>
-        <div id="lobby-chat-box"></div>
-        <div class="chat-input-row">
-            <input type="text" id="chat-msg" placeholder="Oi!" maxlength="40" style="margin:0">
-            <button onclick="GameApp.sendChat()" style="width:80px; margin:0">OK</button>
+        <div id="host-panel" class="ui-panel hidden">
+            <h1>Configurar</h1>
+            <p>Escolha sua cor:</p>
+            <div style="display:flex; gap:10px; justify-content:center;">
+                <div onclick="GameUI.setCol('#FFD93D', this)" style="width:50px; height:50px; background:#FFD93D; border-radius:50%; border:4px solid #fff; cursor:pointer;"></div>
+                <div onclick="GameUI.setCol('#FF6B6B', this)" style="width:50px; height:50px; background:#FF6B6B; border-radius:50%; cursor:pointer;"></div>
+                <div onclick="GameUI.setCol('#4ECDC4', this)" style="width:50px; height:50px; background:#4ECDC4; border-radius:50%; cursor:pointer;"></div>
+            </div>
+            <button onclick="GameApp.createRoom()">ABRIR SALA (MÁX 5)</button>
+            <button onclick="location.reload()" style="background:#aaa; box-shadow: 0 6px 0 #777;">VOLTAR</button>
         </div>
-        <button id="start-btn" onclick="GameApp.startGame()" style="background: var(--secondary); margin-top:15px; display:none;">INICIAR AGORA</button>
-    </div>
 
-    <div id="rank-panel" class="ui-panel hidden">
-        <h1>Melhores do Mundo</h1>
-        <div class="rank-tabs">
-            <button onclick="GameUI.loadRank('daily')">DIÁRIO</button>
-            <button onclick="GameUI.loadRank('weekly')">SEMANA</button>
-            <button onclick="GameUI.loadRank('monthly')">MÊS</button>
-            <button onclick="GameUI.loadRank('overall')">GERAL</button>
+        <div id="rooms-panel" class="ui-panel hidden">
+            <h1>Salas</h1>
+            <div id="room-list-area" style="max-height: 200px; overflow-y: auto;"></div>
+            <button onclick="location.reload()" style="background:#aaa; box-shadow: 0 6px 0 #777;">VOLTAR</button>
         </div>
-        <div id="rank-list-content" class="rank-list"></div>
-        <button onclick="location.reload()" style="background:#aaa; margin-top:10px;">FECHAR</button>
-    </div>
 
-    <div id="over-panel" class="ui-panel hidden">
-        <h1 id="over-msg">FIM!</h1>
-        <h2 id="over-score">0 PONTOS</h2>
-        <button onclick="GameApp.rematch()" style="background: var(--secondary)">JOGAR DE NOVO</button>
-        <button onclick="location.reload()" style="background:#aaa">SAIR</button>
+        <div id="lobby-panel" class="ui-panel hidden">
+            <h2 id="room-code-title" style="margin:0; color:var(--accent)">SALA: ----</h2>
+            <div id="player-count" style="font-size: 0.8rem; font-weight: bold;">Jogadores: 1/5</div>
+            <div id="lobby-players"></div>
+            <div id="lobby-chat-box"></div>
+            <div style="display:flex; gap:5px;">
+                <input type="text" id="chat-input" placeholder="Diga oi..." style="margin:0; flex:1;">
+                <button onclick="GameApp.sendChat()" style="padding:10px; margin:0; width:60px;">OK</button>
+            </div>
+            <button id="btn-start" onclick="GameApp.initPlay()" style="background: var(--secondary); box-shadow: 0 6px 0 #d65555; display:none;">COMEÇAR JOGO</button>
+        </div>
+
+        <div id="rank-panel" class="ui-panel hidden">
+            <h1>Top 10</h1>
+            <div id="rank-content" style="text-align: left; font-size: 0.9rem;"></div>
+            <button onclick="location.reload()">FECHAR</button>
+        </div>
+
+        <div id="over-panel" class="ui-panel hidden">
+            <h1>FIM!</h1>
+            <div id="final-score" style="font-size: 2rem; font-weight: 700;">0</div>
+            <button onclick="GameApp.rematch()" style="background: var(--secondary)">JOGAR DE NOVO</button>
+            <button onclick="location.reload()">SAIR</button>
+        </div>
     </div>
 </div>
 
@@ -144,71 +153,60 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-/* --- FILTRO DE NOMES E CHAT --- */
-const BANNED_WORDS = ['adm', 'admin', 'pnc', 'fdp', 'lixo', 'trouxa', 'babaca', 'idiota']; // Adicione mais se desejar
-function sanitize(text) {
-    let clean = text.toLowerCase().trim();
-    BANNED_WORDS.forEach(word => {
-        if(clean.includes(word)) clean = clean.replace(word, '***');
-    });
-    return clean;
+/* --- FILTROS --- */
+function filterText(t) {
+    const banned = ['adm', 'admin', 'lixo', 'fdp', 'pnc'];
+    let str = t.toLowerCase().trim();
+    banned.forEach(w => str = str.replace(w, '***'));
+    return str;
 }
 
-/* --- MOTOR GRÁFICO (Cartoon Style) --- */
+/* --- GAME ENGINE --- */
 const GameEngine = {
     canvas: document.getElementById('world'),
     ctx: document.getElementById('world').getContext('2d'),
-    birds: new Map(), pipes: [], score: 0, state: 'MENU',
-    bgX: 0,
+    birds: new Map(), pipes: [], state: 'MENU', score: 0,
     
     init() {
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
-        this.loop();
+        this.render();
     },
 
-    drawPipe(x, y, h, type) {
-        const ctx = this.ctx;
-        const w = 70;
-        const capH = 30;
-        
-        ctx.fillStyle = "#73BF2E"; // Verde cano
-        ctx.strokeStyle = "#2D4D12";
-        ctx.lineWidth = 4;
-
-        if(type === 'top') {
-            ctx.fillRect(x, 0, w, h - capH);
-            ctx.strokeRect(x, 0, w, h - capH);
-            // Chapéu do cano
-            ctx.fillRect(x - 5, h - capH, w + 10, capH);
-            ctx.strokeRect(x - 5, h - capH, w + 10, capH);
-        } else {
-            ctx.fillRect(x, y + capH, w, this.canvas.height - y);
-            ctx.strokeRect(x, y + capH, w, this.canvas.height - y);
-            // Chapéu do cano
-            ctx.fillRect(x - 5, y, w + 10, capH);
-            ctx.strokeRect(x - 5, y, w + 10, capH);
-        }
-    },
-
-    loop() {
+    render() {
         this.ctx.clearRect(0,0,this.canvas.width, this.canvas.height);
-        
         if(this.state === 'PLAYING') {
-            // Pipes
             this.pipes.forEach(p => {
-                this.drawPipe(p.x, 0, p.gapY, 'top');
-                this.drawPipe(p.x, p.gapY + 175, 0, 'bottom');
-                if(GameApp.isHost) p.x -= 4; // Velocidade Fixa conforme pedido
+                this.drawPipe(p.x, 0, p.gapY, true);
+                this.drawPipe(p.x, p.gapY + 180, this.canvas.height, false);
+                if(GameApp.isHost) p.x -= 4.2;
             });
-            
-            // Birds
             this.birds.forEach(b => {
                 b.update();
                 this.drawBird(b);
             });
         }
-        requestAnimationFrame(() => this.loop());
+        requestAnimationFrame(() => this.render());
+    },
+
+    drawPipe(x, y, h, isTop) {
+        const ctx = this.ctx;
+        const w = 75;
+        ctx.fillStyle = "#73BF2E";
+        ctx.strokeStyle = "#2D4D12";
+        ctx.lineWidth = 4;
+        
+        if(isTop) {
+            ctx.fillRect(x, 0, w, h);
+            ctx.strokeRect(x, 0, w, h);
+            ctx.fillRect(x-5, h-30, w+10, 30); // Boca
+            ctx.strokeRect(x-5, h-30, w+10, 30);
+        } else {
+            ctx.fillRect(x, y, w, this.canvas.height - y);
+            ctx.strokeRect(x, y, w, this.canvas.height - y);
+            ctx.fillRect(x-5, y, w+10, 30); // Boca
+            ctx.strokeRect(x-5, y, w+10, 30);
+        }
     },
 
     drawBird(b) {
@@ -217,272 +215,238 @@ const GameEngine = {
         ctx.translate(b.x, b.y);
         ctx.rotate(Math.min(Math.PI/4, Math.max(-Math.PI/4, b.v * 0.1)));
         
-        // Corpo (Ovinho cartoon)
+        // Corpo cartoon
         ctx.fillStyle = b.color;
         ctx.strokeStyle = "#000";
         ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 20, 16, 0, 0, Math.PI*2);
-        ctx.fill(); ctx.stroke();
+        ctx.beginPath(); ctx.ellipse(0, 0, 22, 18, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
         
-        // Olho
-        ctx.fillStyle = "#fff";
-        ctx.beginPath(); ctx.arc(10, -5, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#000";
-        ctx.beginPath(); ctx.arc(12, -5, 2, 0, Math.PI*2); ctx.fill();
+        // Asa
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.beginPath(); ctx.ellipse(-12, 0, 10, 8 + Math.sin(Date.now()*0.1)*5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
 
-        // Asa (Animação simples)
-        ctx.fillStyle = "rgba(255,255,255,0.6)";
-        ctx.beginPath();
-        let wingMove = Math.sin(Date.now() * 0.1) * 10;
-        ctx.ellipse(-10, 0, 12, 8 + wingMove, 0, 0, Math.PI*2);
-        ctx.fill(); ctx.stroke();
-
-        // Bico
-        ctx.fillStyle = "#FF9F43";
-        ctx.beginPath();
-        ctx.moveTo(18, 0); ctx.lineTo(28, 4); ctx.lineTo(18, 8); ctx.fill(); ctx.stroke();
+        // Olho e Bico
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(12, -6, 7, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(15, -6, 2.5, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = "#FF9F43"; ctx.beginPath(); ctx.moveTo(20, 0); ctx.lineTo(32, 5); ctx.lineTo(20, 10); ctx.fill(); ctx.stroke();
 
         ctx.restore();
-        
-        // Nome
-        ctx.fillStyle = "#222";
-        ctx.font = "bold 14px Fredoka"; ctx.textAlign = "center";
-        ctx.fillText(b.name, b.x, b.y - 30);
+        ctx.fillStyle = "#000"; ctx.font = "bold 14px Fredoka"; ctx.textAlign = "center";
+        ctx.fillText(b.name, b.x, b.y - 35);
     }
 };
 
-/* --- LOGICA DO PASSARO --- */
-class Bird {
+/* --- JOGADOR --- */
+class PlayerBird {
     constructor(id, name, color) {
         this.id = id; this.name = name; this.color = color;
         this.x = 80; this.y = 300; this.v = 0; this.dead = false;
-        this.gravity = 0.35; // Queda mais seca
     }
     update() {
         if(this.dead) return;
-        this.v += this.gravity;
+        this.v += 0.38; // Gravidade seca
         this.y += this.v;
-        
         if(this.y > GameEngine.canvas.height || this.y < 0) {
             this.dead = true;
-            GameApp.die();
+            GameApp.triggerGameOver();
         }
     }
-    jump() { this.v = -6.5; } // Pulo rápido
+    flap() { this.v = -6.8; }
 }
 
-/* --- LOGICA MULTIPLAYER (Firebase + PeerJS) --- */
+/* --- LOGICA APP --- */
 const GameApp = {
     isHost: false, myId: '', myName: '', myColor: '#FFD93D',
-    connections: [], players: [], hostConn: null,
+    peers: [], players: [], hostConn: null,
     
-    hostGame() {
-        const nameInput = document.getElementById('player-name').value;
-        if(!nameInput) return GameUI.toast("Digite um nome!");
-        this.myName = sanitize(nameInput);
+    createRoom() {
+        const rawName = document.getElementById('player-name').value;
+        if(!rawName) return GameUI.msg("Digite seu nome!");
+        this.myName = filterText(rawName);
         this.isHost = true;
         
-        const roomId = Math.random().toString(36).substring(2,6).toUpperCase();
-        this.peer = new Peer(roomId);
+        const code = Math.random().toString(36).substring(2,6).toUpperCase();
+        this.peer = new Peer(code);
         
         this.peer.on('open', id => {
             this.myId = 'host';
-            document.getElementById('room-id-display').innerText = id;
-            db.ref('rooms/'+id).set({ host: this.myName, active: true });
-            this.players = [{id:'host', name: this.myName, color: this.myColor}];
-            GameUI.showPanel('lobby-panel');
-            document.getElementById('start-btn').style.display = 'block';
+            document.getElementById('room-code-title').innerText = "SALA: " + id;
+            // Salva sala no Firebase como DISPONÍVEL
+            db.ref('active_rooms/'+id).set({ host: this.myName, status: 'waiting', count: 1 });
+            this.players = [{id: 'host', name: this.myName, color: this.myColor}];
+            GameUI.show('lobby-panel');
+            document.getElementById('btn-start').style.display = 'block';
         });
 
         this.peer.on('connection', conn => {
-            conn.on('data', data => this.onData(data, conn));
-            this.connections.push(conn);
+            if(this.players.length >= 5) {
+                setTimeout(() => conn.close(), 500);
+                return;
+            }
+            conn.on('data', d => this.handleNet(d, conn));
+            this.peers.push(conn);
         });
     },
 
-    joinGame(id) {
-        this.myName = sanitize(document.getElementById('player-name').value || 'player');
+    joinRoom(code) {
+        this.myName = filterText(document.getElementById('player-name').value || "Player");
         this.peer = new Peer();
-        this.peer.on('open', myId => {
-            this.myId = myId;
-            const conn = this.peer.connect(id);
+        this.peer.on('open', id => {
+            this.myId = id;
+            const conn = this.peer.connect(code);
             this.hostConn = conn;
             conn.on('open', () => {
-                conn.send({ type: 'JOIN', name: this.myName, color: '#FF6B6B' });
-                GameUI.showPanel('lobby-panel');
-                document.getElementById('room-id-display').innerText = id;
+                conn.send({ type: 'JOIN', name: this.myName });
+                GameUI.show('lobby-panel');
+                document.getElementById('room-code-title').innerText = "SALA: " + code;
             });
-            conn.on('data', data => this.onData(data));
+            conn.on('data', d => this.handleNet(d));
         });
     },
 
-    onData(data, conn) {
-        if(data.type === 'JOIN') {
-            const p = { id: conn.peer, name: data.name, color: data.color };
+    handleNet(d, conn) {
+        if(d.type === 'JOIN') {
+            const p = { id: conn.peer, name: d.name, color: '#FF6B6B' };
             this.players.push(p);
-            this.broadcast({ type: 'SYNC_LOBBY', players: this.players });
-            GameUI.updateLobby();
+            this.syncLobby();
         }
-        if(data.type === 'SYNC_LOBBY') { this.players = data.players; GameUI.updateLobby(); }
-        if(data.type === 'CHAT') { GameUI.addChat(data.sender, data.msg); }
-        if(data.type === 'START') { 
+        if(d.type === 'SYNC') {
+            this.players = d.players;
+            GameUI.refreshLobby();
+        }
+        if(d.type === 'CHAT') {
+            GameUI.addChat(d.user, d.txt);
+        }
+        if(d.type === 'START_GAME') {
             GameEngine.birds.clear();
-            this.players.forEach(p => GameEngine.birds.set(p.id, new Bird(p.id, p.name, p.color)));
+            this.players.forEach(p => GameEngine.birds.set(p.id, new PlayerBird(p.id, p.name, p.color)));
             GameEngine.state = 'PLAYING';
-            GameUI.showPanel('');
+            GameEngine.score = 0;
+            GameUI.show('');
         }
-        if(data.type === 'PIPE') { GameEngine.pipes.push(data.pipe); }
-        if(data.type === 'SCORE') { GameEngine.score = data.score; }
-        if(data.type === 'JUMP') { 
-            const b = GameEngine.birds.get(data.id);
-            if(b) b.jump();
+        if(d.type === 'PIPE_GEN') { GameEngine.pipes.push(d.pipe); }
+        if(d.type === 'SCORE_UP') { GameEngine.score = d.val; }
+        if(d.type === 'JUMP_SYNC') {
+            const b = GameEngine.birds.get(d.id);
+            if(b) b.flap();
         }
     },
 
-    broadcast(data) { this.connections.forEach(c => c.send(data)); },
+    syncLobby() {
+        this.sendAll({ type: 'SYNC', players: this.players });
+        GameUI.refreshLobby();
+        // Atualiza contagem no Firebase
+        db.ref('active_rooms/'+this.peer.id).update({ count: this.players.length });
+    },
 
-    startGame() {
+    sendAll(data) { this.peers.forEach(p => p.send(data)); },
+
+    initPlay() {
         if(!this.isHost) return;
-        // 1. Remover sala da lista pública IMEDIATAMENTE
-        db.ref('rooms/'+this.peer.id).remove();
+        // REMOVE DA LISTAGEM (O ponto 5 que você pediu)
+        db.ref('active_rooms/'+this.peer.id).remove();
         
-        // 2. Avisar geral
-        const data = { type: 'START' };
-        this.broadcast(data);
-        this.onData(data);
-        
-        // 3. Gerador de canos
-        this.pipeTimer = setInterval(() => {
+        this.sendAll({ type: 'START_GAME' });
+        this.handleNet({ type: 'START_GAME' });
+
+        this.gameTicker = setInterval(() => {
             if(GameEngine.state !== 'PLAYING') return;
-            const p = { x: GameEngine.canvas.width, gapY: Math.random() * (GameEngine.canvas.height - 400) + 100, passed: false };
-            this.pipesLogic(p);
-        }, 1500);
+            const pipe = { x: GameEngine.canvas.width, gapY: Math.random() * (GameEngine.canvas.height-380)+100, passed: false };
+            GameEngine.pipes.push(pipe);
+            this.sendAll({ type: 'PIPE_GEN', pipe });
+        }, 1600);
     },
 
-    pipesLogic(p) {
-        GameEngine.pipes.push(p);
-        this.broadcast({ type: 'PIPE', pipe: p });
-    },
-
-    jump() {
+    flap() {
         const b = GameEngine.birds.get(this.myId);
         if(b && !b.dead) {
-            b.jump();
-            if(this.isHost) this.broadcast({ type: 'JUMP', id: 'host' });
-            else this.hostConn.send({ type: 'JUMP', id: this.myId });
+            b.flap();
+            if(this.isHost) this.sendAll({ type: 'JUMP_SYNC', id: 'host' });
+            else this.hostConn.send({ type: 'JUMP_SYNC', id: this.myId });
         }
     },
 
-    die() {
+    triggerGameOver() {
         GameEngine.state = 'OVER';
-        GameUI.showPanel('over-panel');
-        document.getElementById('over-score').innerText = GameEngine.score + " PONTOS";
-        this.saveScore(GameEngine.score);
-    },
-
-    saveScore(score) {
-        const timestamp = Date.now();
-        const date = new Date();
-        const record = { name: this.myName, score: score, timestamp: timestamp };
-        
-        // Salva nos diferentes caminhos para o ranking 4 em 1
-        db.ref('rankings/overall').push(record);
-        db.ref(`rankings/daily/${date.toISOString().split('T')[0]}`).push(record);
-        db.ref(`rankings/weekly/${this.getWeekNumber(date)}`).push(record);
-        db.ref(`rankings/monthly/${date.getMonth()}_${date.getFullYear()}`).push(record);
-    },
-
-    getWeekNumber(d) {
-        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-        var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-        return Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+        clearInterval(this.gameTicker);
+        GameUI.show('over-panel');
+        document.getElementById('final-score').innerText = GameEngine.score + " PTS";
+        this.saveRank(GameEngine.score);
     },
 
     sendChat() {
-        const msg = sanitize(document.getElementById('chat-msg').value);
-        if(!msg) return;
-        const data = { type: 'CHAT', sender: this.myName, msg: msg };
-        if(this.isHost) { this.broadcast(data); this.onData(data); }
-        else { this.hostConn.send(data); }
-        document.getElementById('chat-msg').value = '';
+        const txt = filterText(document.getElementById('chat-input').value);
+        if(!txt) return;
+        const msg = { type: 'CHAT', user: this.myName, txt };
+        if(this.isHost) { this.sendAll(msg); this.handleNet(msg); }
+        else { this.hostConn.send(msg); }
+        document.getElementById('chat-input').value = '';
+    },
+
+    saveRank(s) {
+        db.ref('rankings/global').push({ name: this.myName, score: s, date: Date.now() });
     }
 };
 
-/* --- INTERFACE E UI --- */
+/* --- UI CONTROL --- */
 const GameUI = {
-    showPanel(id) {
+    show(id) {
         document.querySelectorAll('.ui-panel').forEach(p => p.classList.add('hidden'));
         if(id) document.getElementById(id).classList.remove('hidden');
     },
-    toast(txt) {
-        const t = document.getElementById('game-toast');
-        t.innerText = txt; t.style.opacity = 1;
-        setTimeout(() => t.style.opacity = 0, 2000);
+    msg(t) {
+        const toast = document.getElementById('toast');
+        toast.innerText = t; toast.style.opacity = 1;
+        setTimeout(() => toast.style.opacity = 0, 2000);
     },
-    showConfig() {
-        if(!sanitize(document.getElementById('player-name').value)) return this.toast("Digite seu nome!");
-        this.showPanel('host-panel');
+    openHost() {
+        if(!document.getElementById('player-name').value) return this.msg("Digite seu nome!");
+        this.show('host-panel');
     },
-    selCol(c, el) {
+    setCol(c, el) {
         GameApp.myColor = c;
         document.querySelectorAll('#host-panel div').forEach(d => d.style.borderColor = 'transparent');
-        el.style.borderColor = '#fff';
+        el.style.borderColor = "#fff";
     },
-    updateLobby() {
-        const list = document.getElementById('lobby-list');
-        list.innerHTML = GameApp.players.map(p => `<div><span style="color:${p.color}">●</span> ${p.name}</div>`).join('');
+    refreshLobby() {
+        const area = document.getElementById('lobby-players');
+        area.innerHTML = GameApp.players.map(p => `<span class="player-badge" style="border-left: 4px solid ${p.color}">${p.name}</span>`).join('');
+        document.getElementById('player-count').innerText = `Jogadores: ${GameApp.players.length}/5`;
     },
-    addChat(s, m) {
+    addChat(u, t) {
         const box = document.getElementById('lobby-chat-box');
-        box.innerHTML += `<div><b>${s}:</b> ${m}</div>`;
+        box.innerHTML += `<div><b>${u}:</b> ${t}</div>`;
         box.scrollTop = box.scrollHeight;
     },
-    showRooms() {
-        this.showPanel('rooms-panel');
-        const list = document.getElementById('rooms-list');
-        list.innerHTML = "Buscando...";
-        db.ref('rooms').once('value', snap => {
-            list.innerHTML = "";
-            snap.forEach(room => {
-                const r = room.val();
-                const btn = document.createElement('button');
-                btn.innerText = `ENTRAR NA SALA DE ${r.host}`;
-                btn.onclick = () => GameApp.joinGame(room.key);
-                list.appendChild(btn);
+    listRooms() {
+        this.show('rooms-panel');
+        const area = document.getElementById('room-list-area');
+        area.innerHTML = "Buscando salas...";
+        db.ref('active_rooms').once('value', snap => {
+            area.innerHTML = "";
+            snap.forEach(s => {
+                const r = s.val();
+                area.innerHTML += `<button onclick="GameApp.joinRoom('${s.key}')" style="margin-bottom:8px;">SALA DE ${r.host.toUpperCase()} (${r.count}/5)</button>`;
             });
-            if(!list.innerHTML) list.innerHTML = "Nenhuma sala aberta.";
+            if(!area.innerHTML) area.innerHTML = "Nenhuma sala esperando jogadores.";
         });
     },
-    showRankings() { this.showPanel('rank-panel'); this.loadRank('overall'); },
-    loadRank(type) {
-        const cont = document.getElementById('rank-list-content');
-        cont.innerHTML = "Carregando...";
-        let refStr = 'rankings/overall';
-        const date = new Date();
-        if(type === 'daily') refStr = `rankings/daily/${date.toISOString().split('T')[0]}`;
-        if(type === 'weekly') refStr = `rankings/weekly/${GameApp.getWeekNumber(date)}`;
-        if(type === 'monthly') refStr = `rankings/monthly/${date.getMonth()}_${date.getFullYear()}`;
-
-        db.ref(refStr).orderByChild('score').limitToLast(10).once('value', snap => {
-            let arr = [];
-            snap.forEach(x => { arr.push(x.val()); });
-            arr.reverse();
-            cont.innerHTML = arr.map((r, i) => `<div>${i+1}º ${r.name} - ${r.score} pts</div>`).join('');
-            if(!arr.length) cont.innerHTML = "Sem recordes ainda!";
+    showRanking() {
+        this.show('rank-panel');
+        const area = document.getElementById('rank-content');
+        area.innerHTML = "Carregando...";
+        db.ref('rankings/global').orderByChild('score').limitToLast(10).once('value', snap => {
+            let res = []; snap.forEach(x => res.push(x.val()));
+            res.reverse();
+            area.innerHTML = res.map((r, i) => `<div>${i+1}º ${r.name} - ${r.score} pts</div>`).join('');
         });
     }
 };
 
 /* --- INPUTS --- */
-window.onclick = () => { if(GameEngine.state === 'PLAYING') GameApp.jump(); };
-window.ontouchstart = (e) => { 
-    if(GameEngine.state === 'PLAYING' && e.target.tagName !== 'BUTTON') {
-        e.preventDefault(); GameApp.jump(); 
-    }
-};
-document.getElementById('chat-msg').onkeydown = (e) => { if(e.key === 'Enter') GameApp.sendChat(); };
+window.onmousedown = (e) => { if(GameEngine.state === 'PLAYING' && e.target.tagName !== 'BUTTON') GameApp.flap(); };
+window.ontouchstart = (e) => { if(GameEngine.state === 'PLAYING' && e.target.tagName !== 'BUTTON') { e.preventDefault(); GameApp.flap(); } };
+document.getElementById('chat-input').onkeydown = (e) => { if(e.key === 'Enter') GameApp.sendChat(); };
 
 GameEngine.init();
 </script>
