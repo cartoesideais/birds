@@ -22,11 +22,11 @@
         input { width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 10px; box-sizing: border-box; }
         #score { position: absolute; top: 20px; width: 100%; text-align: center; font-size: 3rem; color: white; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); pointer-events: none; z-index: 10; }
         
-        /* Estilo do Chat */
-        #lobby-chat-box { height: 120px; overflow-y: auto; background: #f0f0f0; margin: 10px 0; padding: 10px; border-radius: 10px; text-align: left; font-size: 0.85rem; border: 1px solid #ddd; }
-        .chat-row { display: flex; gap: 5px; margin-top: 5px; }
-        #chat-input { flex: 1; margin: 0; padding: 10px; }
-        #btn-send-chat { width: auto; margin: 0; padding: 0 15px; background: var(--dark); }
+        /* Estilo do Chat Melhorado */
+        #lobby-chat-box { height: 130px; overflow-y: auto; background: #f8f9fa; margin: 10px 0; padding: 10px; border-radius: 10px; text-align: left; font-size: 0.9rem; border: 1px solid #eee; }
+        .chat-input-group { display: flex; gap: 8px; margin-top: 10px; }
+        #chat-input { flex: 1; padding: 10px; margin: 0; }
+        #btn-send-chat { width: 70px; margin: 0; background: var(--dark); padding: 0; font-size: 0.9rem; }
         .player-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; font-weight: 600; }
     </style>
 </head>
@@ -41,50 +41,50 @@
         <input type="text" id="player-name" placeholder="Seu Apelido" maxlength="12">
         <button onclick="GameUI.showHostConfig()" style="background: var(--secondary)">Criar Sala</button>
         <button onclick="GameUI.showRooms()">Salas Online</button>
-        <button onclick="GameUI.showGlobalRankings()" style="background: var(--dark)">Rankings Globais</button>
+        <button onclick="GameUI.showGlobalRankings()" style="background: var(--dark)">Ver Rankings</button>
     </div>
 
     <div id="host-config-panel" class="panel hidden">
-        <h1>Nova Partida</h1>
-        <label>Velocidade do Jogo:</label>
-        <input type="range" id="cfg-speed" min="2" max="6" value="3.5" step="0.5">
+        <h1>Nova Sala</h1>
+        <label>Velocidade do Voo:</label>
+        <input type="range" id="cfg-speed" min="2" max="7" value="3.5" step="0.5">
         <div style="display:flex; gap:5px; margin:15px 0; justify-content:center;">
             <input type="color" id="col-0" value="#FFD93D">
             <input type="color" id="col-1" value="#FF6B6B">
             <input type="color" id="col-2" value="#4ECDC4">
         </div>
         <button onclick="GameApp.hostGame()">Abrir Sala</button>
-        <button onclick="location.reload()" style="background:#aaa">Voltar</button>
+        <button onclick="location.reload()" style="background:#aaa">Cancelar</button>
     </div>
 
     <div id="rooms-panel" class="panel hidden">
         <h1>Salas Ativas</h1>
-        <div id="rooms-list-container" style="max-height: 200px; overflow-y: auto;"></div>
-        <button onclick="location.reload()">Sair</button>
+        <div id="rooms-list-container" style="max-height: 200px; overflow-y: auto; margin-bottom: 10px;"></div>
+        <button onclick="location.reload()">Voltar</button>
     </div>
 
     <div id="lobby-panel" class="panel hidden">
         <h1>Sala: <span id="display-room-code">----</span></h1>
         <div id="lobby-player-list"></div>
-        <div id="lobby-chat-box" id="chat-content"></div>
-        <div class="chat-row">
+        <div id="lobby-chat-box"></div>
+        <div class="chat-input-group">
             <input type="text" id="chat-input" placeholder="Mensagem...">
-            <button id="btn-send-chat" onclick="GameApp.sendChat()">OK</button>
+            <button id="btn-send-chat" onclick="GameApp.sendChat()">ENVIAR</button>
         </div>
-        <button id="start-btn" onclick="GameApp.requestStart()" style="background: var(--secondary); margin-top:15px;">INICIAR JOGO</button>
+        <button id="start-btn" onclick="GameApp.requestStart()" style="background: var(--secondary); margin-top: 20px;">INICIAR JOGO AGORA</button>
     </div>
 
     <div id="ranking-panel" class="panel hidden">
-        <h1>Fim de Jogo!</h1>
-        <div id="ranking-results" style="margin-bottom: 15px; font-weight: bold; font-size: 1.2rem;"></div>
-        <button onclick="GameApp.rematch()" style="background: var(--secondary)">Jogar Novamente</button>
-        <button onclick="location.reload()">Sair da Sala</button>
+        <h1>Fim da Linha!</h1>
+        <div id="ranking-results" style="margin: 20px 0; font-size: 1.3rem; font-weight: 600;"></div>
+        <button onclick="GameApp.rematch()" style="background: var(--secondary)">Tentar de Novo</button>
+        <button onclick="location.reload()">Sair para o Menu</button>
     </div>
 </div>
 
 <script>
 /* ==========================================
-   CONFIGURAÇÃO FIREBASE (SUAS CHAVES)
+   FIREBASE CONFIG (SUAS CHAVES)
    ========================================== */
 const firebaseConfig = {
   apiKey: "AIzaSyB2OmU8VSXLnKV254zUJj1F3jkF2oSIKSA",
@@ -93,17 +93,16 @@ const firebaseConfig = {
   projectId: "flappymultiplayer-2d2e8",
   storageBucket: "flappymultiplayer-2d2e8.firebasestorage.app",
   messagingSenderId: "738226110512",
-  appId: "1:738226110512:web:630ec1efe6073d450c2df5",
-  measurementId: "G-0Q1CNX0K9D"
+  appId: "1:738226110512:web:630ec1efe6073d450c2df5"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 /* ==========================================
-   MOTOR DO JOGO
+   GAME ENGINE
    ========================================== */
-const CONFIG = { gravity: 0.22, jump: -5.5, pipeWidth: 65, pipeGap: 170 };
+const CONFIG = { gravity: 0.23, jump: -5.6, pipeWidth: 65, pipeGap: 170 };
 
 class Bird {
     constructor(id, name, color) {
@@ -116,7 +115,7 @@ class Bird {
         this.y += this.v;
         if (this.y < 0 || this.y > GameEngine.canvas.height) {
             this.dead = true;
-            GameApp.handleBirdDeath(this.id);
+            GameApp.handleDeath(this.id);
         }
     }
     draw(ctx) {
@@ -157,7 +156,7 @@ const GameEngine = {
                 this.birds.forEach(b => {
                     if(!b.dead && (b.y < p.gapY || b.y > p.gapY + CONFIG.pipeGap) && b.x + 10 > p.x && b.x - 10 < p.x + CONFIG.pipeWidth) {
                         b.dead = true;
-                        GameApp.handleBirdDeath(b.id);
+                        GameApp.handleDeath(b.id);
                     }
                 });
                 if (!p.passed && p.x + CONFIG.pipeWidth < 60) {
@@ -167,8 +166,8 @@ const GameEngine = {
                 }
             });
             this.pipes = this.pipes.filter(p => p.x > -CONFIG.pipeWidth);
-            if (this.pipes.length === 0 || this.pipes[this.pipes.length-1].x < this.canvas.width - 300) {
-                const p = { x: this.canvas.width, gapY: Math.random() * (this.canvas.height - 350) + 80, passed: false };
+            if (this.pipes.length === 0 || this.pipes[this.pipes.length-1].x < this.canvas.width - 320) {
+                const p = { x: this.canvas.width, gapY: Math.random() * (this.canvas.height - 380) + 80, passed: false };
                 this.pipes.push(p);
                 GameApp.broadcast({ type: 'PIPE', p });
             }
@@ -189,6 +188,9 @@ const GameEngine = {
     loop() { this.update(); this.draw(); requestAnimationFrame(() => this.loop()); }
 };
 
+/* ==========================================
+   APP LOGIC
+   ========================================== */
 const GameApp = {
     isHost: false, myId: null, myName: '', connections: [], players: [],
     
@@ -230,31 +232,26 @@ const GameApp = {
         const input = document.getElementById('chat-input');
         const msg = input.value.trim();
         if(!msg) return;
-        const chatData = { type: 'CHAT', sender: this.myName, msg: msg };
-        if(this.isHost) {
-            this.broadcast(chatData);
-            this.handleData(chatData);
-        } else {
-            this.hostConn.send(chatData);
-        }
+        const data = { type: 'CHAT', sender: this.myName, msg: msg };
+        if(this.isHost) { this.broadcast(data); this.handleData(data); } 
+        else { this.hostConn.send(data); }
         input.value = '';
     },
 
     handleData(data, conn) {
         if (data.type === 'JOIN') {
-            const colors = [document.getElementById('col-1').value, document.getElementById('col-2').value, '#9b59b6'];
-            const p = { id: conn.peer, name: data.name, color: colors[this.players.length-1] || '#333', conn: conn };
+            const p = { id: conn.peer, name: data.name, color: '#FF6B6B', conn: conn };
             this.players.push(p);
             this.broadcast({ type: 'LOBBY', players: this.players.map(x => ({id:x.id, name:x.name, color:x.color})) });
             GameUI.updateLobbyList();
         }
         if (data.type === 'CHAT') {
             const box = document.getElementById('lobby-chat-box');
-            box.innerHTML += `<div><b>${data.sender}:</b> ${data.msg}</div>`;
+            box.innerHTML += `<div><strong>${data.sender}:</strong> ${data.msg}</div>`;
             box.scrollTop = box.scrollHeight;
         }
         if (data.type === 'LOBBY') { this.players = data.players; GameUI.updateLobbyList(); }
-        if (data.type === 'START') { 
+        if (data.type === 'START') {
             GameEngine.birds.clear();
             this.players.forEach(p => GameEngine.birds.set(p.id, new Bird(p.id, p.name, p.color)));
             GameEngine.reset(data.speed);
@@ -263,24 +260,23 @@ const GameApp = {
         if (data.type === 'PIPE') GameEngine.pipes.push(data.p);
         if (data.type === 'SCORE') GameEngine.score = data.score;
         if (data.type === 'DIE') {
-            const b = GameEngine.birds.get(data.id);
-            if(b) b.dead = true;
-            if(data.id === this.myId) this.showGameOver(data.score);
+            const b = GameEngine.birds.get(data.id); if(b) b.dead = true;
+            if(data.id === this.myId) this.gameOver(data.score);
         }
         if (data.type === 'JUMP') { const b = GameEngine.birds.get(data.id); if(b) b.v = CONFIG.jump; }
     },
 
-    handleBirdDeath(id) {
-        if (!this.isHost) return;
-        this.broadcast({ type: 'DIE', id: id, score: GameEngine.score });
-        const b = GameEngine.birds.get(id); if(b) b.dead = true;
-        if(id === 'host') this.showGameOver(GameEngine.score);
-    },
-
     broadcast(data) { this.connections.forEach(c => c.open && c.send(data)); },
     
+    handleDeath(id) {
+        if(!this.isHost) return;
+        this.broadcast({ type: 'DIE', id: id, score: GameEngine.score });
+        const b = GameEngine.birds.get(id); if(b) b.dead = true;
+        if(id === 'host') this.gameOver(GameEngine.score);
+    },
+
     requestStart() {
-        if (!this.isHost) return;
+        if(!this.isHost) return;
         const speed = parseFloat(document.getElementById('cfg-speed').value);
         const startData = { type: 'START', speed: speed };
         this.broadcast(startData);
@@ -290,37 +286,37 @@ const GameApp = {
 
     jump() {
         if (GameEngine.state !== 'PLAYING') return;
-        const myBird = GameEngine.birds.get(this.myId);
-        if (myBird && !myBird.dead) {
-            myBird.v = CONFIG.jump;
+        const b = GameEngine.birds.get(this.myId);
+        if (b && !b.dead) {
+            b.v = CONFIG.jump;
             if (this.isHost) this.broadcast({ type: 'JUMP', id: this.myId });
             else this.hostConn.send({ type: 'JUMP', id: this.myId });
         }
     },
 
-    showGameOver(finalScore) {
+    gameOver(s) {
         GameEngine.state = 'GAMEOVER';
         document.getElementById('ranking-panel').classList.remove('hidden');
-        document.getElementById('ranking-results').innerText = `Sua Pontuação: ${finalScore}`;
-        db.ref('rankings').push({ name: this.myName, score: finalScore, date: firebase.database.ServerValue.TIMESTAMP });
+        document.getElementById('ranking-results').innerText = `Você fez ${s} pontos!`;
+        db.ref('rankings').push({ name: this.myName, score: s, date: firebase.database.ServerValue.TIMESTAMP });
     },
 
     rematch() {
-        if (this.isHost) this.requestStart();
-        else alert("Aguardando o dono da sala reiniciar...");
+        if(this.isHost) this.requestStart();
+        else alert("Aguarde o dono da sala reiniciar...");
     }
 };
 
 const GameUI = {
     showHostConfig() { 
-        if(!document.getElementById('player-name').value) return alert("Qual seu apelido?");
+        if(!document.getElementById('player-name').value) return alert("Digite seu nome!");
         document.getElementById('menu-panel').classList.add('hidden'); 
         document.getElementById('host-config-panel').classList.remove('hidden'); 
     },
     setupLobby() {
         document.querySelectorAll('.panel').forEach(p => p.classList.add('hidden'));
         document.getElementById('lobby-panel').classList.remove('hidden');
-        if (!GameApp.isHost) document.getElementById('start-btn').classList.add('hidden');
+        this.updateLobbyList();
     },
     updateLobbyList() {
         const list = document.getElementById('lobby-player-list');
@@ -330,14 +326,13 @@ const GameUI = {
         document.getElementById('menu-panel').classList.add('hidden');
         document.getElementById('rooms-panel').classList.remove('hidden');
         const container = document.getElementById('rooms-list-container');
-        container.innerHTML = "Buscando salas...";
+        container.innerHTML = "Buscando...";
         db.ref('rooms').once('value', snapshot => {
-            const rooms = snapshot.val();
-            container.innerHTML = "";
-            if(!rooms) container.innerHTML = "Nenhuma sala aberta agora.";
+            const rooms = snapshot.val(); container.innerHTML = "";
+            if(!rooms) container.innerHTML = "Nenhuma sala aberta.";
             for (let id in rooms) {
                 const btn = document.createElement('button');
-                btn.innerText = `Entrar na sala de ${rooms[id].host}`;
+                btn.innerText = `Sala do ${rooms[id].host}`;
                 btn.onclick = () => GameApp.joinGame(id);
                 container.appendChild(btn);
             }
@@ -347,29 +342,18 @@ const GameUI = {
         db.ref('rankings').orderByChild('score').limitToLast(10).once('value', snap => {
             let list = []; snap.forEach(c => { list.push(c.val()); });
             list.reverse();
-            let msg = "🏆 TOP 10 GLOBAL 🏆\n\n";
+            let msg = "🏆 TOP 10 MUNDIAL 🏆\n\n";
             list.forEach((r, i) => msg += `${i+1}º ${r.name}: ${r.score}\n`);
             alert(msg);
         });
     }
 };
 
-// Eventos de Teclado e Chat
-document.getElementById('chat-input').addEventListener('keypress', (e) => {
-    if(e.key === 'Enter') GameApp.sendChat();
-});
-
-window.addEventListener('keydown', (e) => { 
-    if(e.code === 'Space' && document.activeElement.tagName !== 'INPUT') GameApp.jump(); 
-});
-window.addEventListener('mousedown', (e) => { 
-    if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') GameApp.jump(); 
-});
-window.addEventListener('touchstart', (e) => { 
-    if(e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') {
-        e.preventDefault(); GameApp.jump();
-    }
-}, {passive: false});
+// Eventos
+document.getElementById('chat-input').onkeydown = (e) => { if(e.key==='Enter') GameApp.sendChat(); };
+window.onkeydown = (e) => { if(e.code==='Space' && document.activeElement.tagName!=='INPUT') GameApp.jump(); };
+window.onmousedown = (e) => { if(e.target.tagName!=='BUTTON' && e.target.tagName!=='INPUT') GameApp.jump(); };
+window.ontouchstart = (e) => { if(e.target.tagName!=='BUTTON' && e.target.tagName!=='INPUT') { e.preventDefault(); GameApp.jump(); } };
 
 GameEngine.init();
 </script>
