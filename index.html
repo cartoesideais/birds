@@ -1,344 +1,442 @@
 <!DOCTYPE html>
+
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Flappy Sky Party - Ultimate</title>
-    
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap" rel="stylesheet">
-    
-    <style>
-        :root { --primary: #FFD93D; --secondary: #FF6B6B; --accent: #4ECDC4; --dark: #2C3E50; }
-        body { margin: 0; overflow: hidden; background: #222; font-family: 'Fredoka', sans-serif; touch-action: none; }
-        #game-container { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #4facfe; }
-        canvas { display: block; width: 100%; height: 100%; }
-        
-        .ui-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 100; }
-        .ui-panel { background: rgba(255,255,255,0.95); padding: 25px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; width: 85%; max-width: 340px; pointer-events: auto; border: 4px solid #fff; display: flex; flex-direction: column; gap: 10px; }
-        .hidden { display: none !important; }
-        
-        button { background: var(--accent); color: white; border: none; padding: 15px; border-radius: 15px; font-size: 1.1rem; cursor: pointer; font-weight: 700; box-shadow: 0 5px 0 #39a69e; }
-        button:active { transform: translateY(3px); box-shadow: 0 2px 0 #39a69e; }
-        input { width: 100%; padding: 12px; border: 3px solid #eee; border-radius: 12px; text-align: center; box-sizing: border-box; }
-        
-        #lobby-chat-box { height: 100px; overflow-y: auto; background: #f9f9f9; border-radius: 10px; padding: 8px; font-size: 0.8rem; text-align: left; border: 1px solid #ddd; }
-        #score-ui { position: absolute; top: 40px; width: 100%; text-align: center; font-size: 4rem; color: white; font-weight: 700; text-shadow: 3px 3px 0 rgba(0,0,0,0.2); z-index: 10; pointer-events: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flappy Sky Party</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+:root { --primary:#FFD93D; --secondary:#FF6B6B; --accent:#4ECDC4; }
+
+body{margin:0;overflow:hidden;background:#222;font-family:'Fredoka',sans-serif;touch-action:none}
+
+#game-container{position:relative;width:100vw;height:100vh;overflow:hidden;background:#4facfe}
+
+canvas{display:block;width:100%;height:100%}
+
+.ui-wrapper{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:100}
+
+.ui-panel{
+background:rgba(255,255,255,0.95);
+padding:25px;
+border-radius:25px;
+box-shadow:0 15px 35px rgba(0,0,0,0.3);
+text-align:center;
+width:85%;
+max-width:340px;
+pointer-events:auto;
+border:4px solid #fff;
+display:flex;
+flex-direction:column;
+gap:10px
+}
+
+.hidden{display:none!important}
+
+button{
+background:var(--accent);
+color:white;
+border:none;
+padding:15px;
+border-radius:15px;
+font-size:1.1rem;
+cursor:pointer;
+font-weight:700;
+box-shadow:0 5px 0 #39a69e
+}
+
+button:active{
+transform:translateY(3px);
+box-shadow:0 2px 0 #39a69e
+}
+
+input{
+width:100%;
+padding:12px;
+border:3px solid #eee;
+border-radius:12px;
+text-align:center;
+box-sizing:border-box
+}
+
+#score-ui{
+position:absolute;
+top:40px;
+width:100%;
+text-align:center;
+font-size:4rem;
+color:white;
+font-weight:700;
+text-shadow:3px 3px 0 rgba(0,0,0,0.2);
+z-index:10;
+pointer-events:none
+}
+
+#lobby-chat-box{
+height:100px;
+overflow-y:auto;
+background:#f9f9f9;
+border-radius:10px;
+padding:8px;
+font-size:0.8rem;
+text-align:left;
+border:1px solid #ddd
+}
+</style>
+
 </head>
+
 <body>
 
 <div id="game-container">
-    <div id="score-ui">0</div>
-    <canvas id="world"></canvas>
 
-    <div class="ui-wrapper">
-        <div id="menu-panel" class="ui-panel">
-            <h1 style="color:var(--secondary); margin:0;">SKY PARTY</h1>
-            <input type="text" id="player-name" placeholder="Nome (A-Z, 0-9)" maxlength="10">
-            <button onclick="UI.startHost()" style="background:var(--secondary); box-shadow:0 5px 0 #d65555;">CRIAR SALA</button>
-            <button onclick="UI.listRooms()">BUSCAR SALAS</button>
-        </div>
+<div id="score-ui">0</div>
 
-        <div id="lobby-panel" class="ui-panel hidden">
-            <h2 id="room-id" style="margin:0; color:var(--accent)">SALA: ----</h2>
-            <div id="player-list" style="font-weight: bold; font-size: 0.9rem;"></div>
-            <div id="lobby-chat-box"></div>
-            <div style="display:flex; gap:5px;">
-                <input type="text" id="chat-input" placeholder="Chat..." style="flex:1;">
-                <button onclick="App.sendChat()" style="width:50px; padding:10px;">OK</button>
-            </div>
-            <button id="btn-start" onclick="App.startGame()" style="background:var(--secondary); display:none;">INICIAR PARTIDA</button>
-        </div>
+<canvas id="world"></canvas>
 
-        <div id="over-panel" class="ui-panel hidden">
-            <h1>FIM DE JOGO</h1>
-            <h2 id="final-score">0</h2>
-            <button onclick="location.reload()">SAIR PARA O MENU</button>
-        </div>
-    </div>
+<div class="ui-wrapper">
+
+<div id="menu-panel" class="ui-panel">
+
+<h1 style="color:var(--secondary);margin:0;">SKY PARTY</h1>
+
+<input type="text" id="player-name" placeholder="Nome (A-Z,0-9)" maxlength="10">
+
+<button onclick="UI.startHost()" style="background:var(--secondary)">CRIAR SALA</button>
+
+<button onclick="UI.listRooms()">BUSCAR SALAS</button>
+
+</div>
+
+<div id="lobby-panel" class="ui-panel hidden">
+
+<h2 id="room-id">SALA</h2>
+
+<div id="player-list"></div>
+
+<div id="lobby-chat-box"></div>
+
+<div style="display:flex;gap:5px">
+<input type="text" id="chat-input">
+<button onclick="App.sendChat()">OK</button>
+</div>
+
+<button id="btn-start" onclick="App.startGame()" style="background:var(--secondary);display:none">
+INICIAR
+</button>
+
+</div>
+
+<div id="over-panel" class="ui-panel hidden">
+
+<h1>FIM DE JOGO</h1>
+
+<h2 id="final-score">0</h2>
+
+<button onclick="location.reload()">SAIR</button>
+
+</div>
+
+</div>
 </div>
 
 <script>
-/* --- CONFIG FIREBASE --- */
-const firebaseConfig = {
-    apiKey: "AIzaSyB2OmU8VSXLnKV254zUJj1F3jkF2oSIKSA",
-    authDomain: "flappymultiplayer-2d2e8.firebaseapp.com",
-    databaseURL: "https://flappymultiplayer-2d2e8-default-rtdb.firebaseio.com",
-    projectId: "flappymultiplayer-2d2e8",
-    storageBucket: "flappymultiplayer-2d2e8.firebasestorage.app",
-    messagingSenderId: "738226110512",
-    appId: "1:738226110512:web:630ec1efe6073d450c2df5"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
 
-/* --- FILTROS --- */
-const BAD_WORDS = ['adm', 'admin', 'lixo', 'fdp', 'pnc', 'puta', 'trouxa', 'babaca'];
-function sanitize(txt) {
-    let s = txt.toLowerCase().trim();
-    BAD_WORDS.forEach(w => s = s.replace(new RegExp(w, 'g'), '***'));
-    return s;
-}
-function isValidName(n) {
-    return /^[a-zA-Z0-9]+$/.test(n);
+/* FIREBASE */
+
+const firebaseConfig={
+apiKey:"AIzaSyB2OmU8VSXLnKV254zUJj1F3jkF2oSIKSA",
+authDomain:"flappymultiplayer-2d2e8.firebaseapp.com",
+databaseURL:"https://flappymultiplayer-2d2e8-default-rtdb.firebaseio.com",
+projectId:"flappymultiplayer-2d2e8",
+storageBucket:"flappymultiplayer-2d2e8.appspot.com",
+messagingSenderId:"738226110512",
+appId:"1:738226110512:web:630ec1efe6073d450c2df5"
 }
 
-/* --- MOTOR DO JOGO --- */
-const Engine = {
-    canvas: document.getElementById('world'),
-    ctx: document.getElementById('world').getContext('2d'),
-    birds: new Map(), pipes: [], state: 'MENU',
-    bgData: { clouds: [], mountains: [] },
-    speed: 4.0,
-    
-    init() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight;
-        // Gerar Fundo
-        for(let i=0; i<5; i++) this.bgData.clouds.push({x: Math.random()*this.canvas.width, y: Math.random()*200, s: 0.5+Math.random()});
-        for(let i=0; i<3; i++) this.bgData.mountains.push({x: i*(this.canvas.width/2), s: 1.2});
-        this.loop();
-    },
+firebase.initializeApp(firebaseConfig)
 
-    drawPipe(p) {
-        const ctx = this.ctx;
-        const w = 70;
-        ctx.fillStyle = "#73BF2E"; ctx.strokeStyle = "#2D4D12"; ctx.lineWidth = 4;
-        // Topo
-        ctx.fillRect(p.x, 0, w, p.gapY); ctx.strokeRect(p.x, 0, w, p.gapY);
-        ctx.fillRect(p.x-5, p.gapY-30, w+10, 30); ctx.strokeRect(p.x-5, p.gapY-30, w+10, 30);
-        // Base
-        const bY = p.gapY + 170;
-        ctx.fillRect(p.x, bY, w, this.canvas.height - bY); ctx.strokeRect(p.x, bY, w, this.canvas.height - bY);
-        ctx.fillRect(p.x-5, bY, w+10, 30); ctx.strokeRect(p.x-5, bY, w+10, 30);
-    },
+const db=firebase.database()
 
-    loop() {
-        const ctx = this.ctx;
-        ctx.fillStyle = "#4facfe"; ctx.fillRect(0,0,this.canvas.width, this.canvas.height);
-        
-        // Desenhar Fundo (Parallax)
-        ctx.fillStyle = "#3b9ae1";
-        this.bgData.mountains.forEach(m => {
-            ctx.beginPath(); ctx.moveTo(m.x, this.canvas.height); ctx.lineTo(m.x+200, this.canvas.height-150); ctx.lineTo(m.x+400, this.canvas.height); ctx.fill();
-            if(this.state === 'PLAYING') m.x -= this.speed * 0.2;
-            if(m.x < -400) m.x = this.canvas.width;
-        });
+/* ROOMS API (substitui Netlify) */
 
-        if(this.state === 'PLAYING') {
-            this.pipes.forEach((p, idx) => {
-                p.x -= this.speed;
-                this.drawPipe(p);
+const RoomsAPI={
 
-                // COLISÃO (Hitbox precisa)
-                this.birds.forEach(b => {
-                    if(b.id === App.myId && !b.dead) {
-                        const hitW = 34; const hitH = 28;
-                        const birdRect = { l: b.x-17, r: b.x+17, t: b.y-14, b: b.y+14 };
-                        const pipeW = 70;
-                        const inPipeX = birdRect.r > p.x && birdRect.l < p.x + pipeW;
-                        const hitTop = birdRect.t < p.gapY;
-                        const hitBottom = birdRect.b > p.gapY + 170;
-                        
-                        if(inPipeX && (hitTop || hitBottom)) {
-                            b.dead = true; App.die();
-                        }
-                        
-                        // SCORE
-                        if(!p.passed && b.x > p.x + pipeW) {
-                            p.passed = true;
-                            App.addScore();
-                        }
-                    }
-                });
-            });
-            this.pipes = this.pipes.filter(p => p.x > -100);
+async list(){
 
-            this.birds.forEach(b => {
-                b.update();
-                this.drawBird(b);
-            });
-            document.getElementById('score-ui').innerText = App.score;
-        }
-        requestAnimationFrame(() => this.loop());
-    },
+const snap=await db.ref("sky_rooms").once("value")
 
-    drawBird(b) {
-        const ctx = this.ctx;
-        ctx.save(); ctx.translate(b.x, b.y);
-        ctx.rotate(Math.min(Math.PI/4, Math.max(-Math.PI/4, b.v * 0.1)));
-        ctx.fillStyle = b.color; ctx.strokeStyle = "#000"; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.ellipse(0, 0, 20, 16, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        // Asa
-        ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.beginPath();
-        ctx.ellipse(-10, 0, 12, 8 + Math.sin(Date.now()*0.1)*5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        // Olho
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(10, -5, 6, 0, Math.PI*2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = "#000"; ctx.beginPath(); ctx.arc(12, -5, 2, 0, Math.PI*2); ctx.fill();
-        ctx.restore();
-        ctx.fillStyle = "#000"; ctx.font = "bold 14px Arial"; ctx.textAlign = "center";
-        ctx.fillText(b.name, b.x, b.y - 30);
-    }
-};
+const rooms=[]
 
-class Bird {
-    constructor(id, name, color) {
-        this.id = id; this.name = name; this.color = color;
-        this.x = 100; this.y = 300; this.v = 0; this.dead = false;
-    }
-    update() {
-        if(this.dead) return;
-        this.v += 0.45; // Queda seca
-        this.y += this.v;
-        if(this.y > Engine.canvas.height || this.y < 0) { this.dead = true; App.die(); }
-    }
-    flap() { this.v = -7.5; } // Subida rápida e direta
+snap.forEach(r=>{
+rooms.push({id:r.key,...r.val()})
+})
+
+return rooms
+},
+
+async create(id,hostName){
+
+await db.ref("sky_rooms/"+id).set({
+hostName,
+createdAt:Date.now()
+})
+
+},
+
+async delete(id){
+
+await db.ref("sky_rooms/"+id).remove()
+
 }
 
-/* --- LOGICA MULTIPLAYER --- */
-const App = {
-    isHost: false, myId: '', myName: '', peers: [], players: [], score: 0,
-    
-    hostRoom() {
-        const code = Math.random().toString(36).substring(2,6).toUpperCase();
-        this.peer = new Peer(code);
-        this.peer.on('open', id => {
-            this.myId = 'host'; this.isHost = true;
-            db.ref('sky_rooms/'+id).set({ host: this.myName, count: 1 });
-            this.players = [{id:'host', name:this.myName, color:'#FFD93D'}];
-            UI.show('lobby-panel'); document.getElementById('room-id').innerText = "SALA: "+id;
-            document.getElementById('btn-start').style.display = 'block';
-        });
-        this.peer.on('connection', conn => {
-            if(this.players.length >= 5) return conn.close();
-            conn.on('data', d => this.handleData(d, conn));
-            this.peers.push(conn);
-        });
-    },
+}
 
-    joinRoom(id) {
-        this.peer = new Peer();
-        this.peer.on('open', myId => {
-            this.myId = myId;
-            const conn = this.peer.connect(id);
-            this.hostConn = conn;
-            conn.on('open', () => {
-                conn.send({type:'JOIN', name:this.myName});
-                UI.show('lobby-panel'); document.getElementById('room-id').innerText = "SALA: "+id;
-            });
-            conn.on('data', d => this.handleData(d));
-        });
-    },
 
-    handleData(d, conn) {
-        if(d.type === 'JOIN') {
-            const p = {id: conn.peer, name: d.name, color:'#FF6B6B'};
-            this.players.push(p); this.sync();
-        }
-        if(d.type === 'SYNC') { this.players = d.players; UI.updateLobby(); }
-        if(d.type === 'CHAT') { UI.addChat(d.user, d.txt); }
-        if(d.type === 'START') {
-            Engine.birds.clear();
-            this.players.forEach(p => Engine.birds.set(p.id, new Bird(p.id, p.name, p.color)));
-            Engine.state = 'PLAYING'; Engine.pipes = []; Engine.speed = 4.0; this.score = 0;
-            UI.show('');
-        }
-        if(d.type === 'PIPE') Engine.pipes.push(d.pipe);
-        if(d.type === 'JUMP') { const b = Engine.birds.get(d.id); if(b) b.flap(); }
-        if(d.type === 'SPD_UP') Engine.speed *= 1.1;
-    },
+/* RANKINGS API (substitui Netlify) */
 
-    sync() { this.broadcast({type:'SYNC', players:this.players}); UI.updateLobby(); },
-    broadcast(data) { this.peers.forEach(p => p.send(data)); },
+const RankingsAPI={
 
-    startGame() {
-        if(!this.isHost) return;
-        db.ref('sky_rooms/'+this.peer.id).remove();
-        this.broadcast({type:'START'}); this.handleData({type:'START'});
-        this.pipeTimer = setInterval(() => {
-            if(Engine.state !== 'PLAYING') return;
-            const p = {x: Engine.canvas.width, gapY: Math.random()*(Engine.canvas.height-350)+100, passed:false};
-            Engine.pipes.push(p); this.broadcast({type:'PIPE', pipe: p});
-        }, 1500);
-    },
+async submit(name,score){
 
-    addScore() {
-        this.score++;
-        if(this.score % 10 === 0) {
-            Engine.speed *= 1.1;
-            if(this.isHost) this.broadcast({type:'SPD_UP'});
-            else this.hostConn.send({type:'SPD_UP'});
-        }
-    },
+const now=new Date()
 
-    flap() {
-        const b = Engine.birds.get(this.myId);
-        if(b && !b.dead) {
-            b.flap();
-            if(this.isHost) this.broadcast({type:'JUMP', id:'host'});
-            else this.hostConn.send({type:'JUMP', id:this.myId});
-        }
-    },
+const dailyKey=`daily_${now.toISOString().split("T")[0]}`
 
-    die() {
-        Engine.state = 'OVER'; clearInterval(this.pipeTimer);
-        UI.show('over-panel'); document.getElementById('final-score').innerText = this.score + " PONTOS";
-    },
+const d=new Date(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()))
 
-    sendChat() {
-        const txt = sanitize(document.getElementById('chat-input').value);
-        if(!txt) return;
-        const msg = {type:'CHAT', user:this.myName, txt};
-        if(this.isHost) { this.broadcast(msg); this.handleData(msg); }
-        else { this.hostConn.send(msg); }
-        document.getElementById('chat-input').value = '';
-    }
-};
+const dayNum=d.getUTCDay()||7
 
-/* --- UI --- */
-const UI = {
-    show(id) {
-        document.querySelectorAll('.ui-panel').forEach(p => p.classList.add('hidden'));
-        if(id) document.getElementById(id).classList.remove('hidden');
-    },
-    startHost() {
-        const n = document.getElementById('player-name').value;
-        if(!isValidName(n)) return alert("Nome deve ser Alfanumérico (letras e números apenas)!");
-        App.myName = sanitize(n);
-        App.hostRoom();
-    },
-    listRooms() {
-        this.show('menu-panel'); // Simples refresh
-        db.ref('sky_rooms').once('value', snap => {
-            let html = "<h3>Salas Abertas:</h3>";
-            snap.forEach(s => {
-                html += `<button onclick="App.joinRoom('${s.key}')" style="margin-bottom:5px;">SALA DE ${s.val().host}</button>`;
-            });
-            document.getElementById('menu-panel').innerHTML = html + `<button onclick="location.reload()">VOLTAR</button>`;
-        });
-    },
-    updateLobby() {
-        document.getElementById('player-list').innerHTML = App.players.map(p => `<span>${p.name}</span>`).join(' | ');
-    },
-    addChat(u, t) {
-        const b = document.getElementById('lobby-chat-box');
-        b.innerHTML += `<div><b>${u}:</b> ${t}</div>`; b.scrollTop = b.scrollHeight;
-    }
-};
+d.setUTCDate(d.getUTCDate()+4-dayNum)
 
-/* --- CONTROLES --- */
-window.onkeydown = (e) => { 
-    if(e.code === 'Space' && document.activeElement.tagName !== 'INPUT') {
-        e.preventDefault(); App.flap(); 
-    }
-};
-window.onmousedown = (e) => { if(Engine.state === 'PLAYING' && e.target.tagName !== 'BUTTON') App.flap(); };
-window.ontouchstart = (e) => { if(Engine.state === 'PLAYING' && e.target.tagName !== 'BUTTON') { e.preventDefault(); App.flap(); } };
+const yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1))
 
-Engine.init();
+const weekNo=Math.ceil((((d-yearStart)/86400000)+1)/7)
+
+const weeklyKey=`weekly_${d.getUTCFullYear()}_${weekNo}`
+
+const monthlyKey=`monthly_${now.getUTCFullYear()}_${now.getMonth()+1}`
+
+await Promise.all([
+this.update("overall",name,score),
+this.update(monthlyKey,name,score),
+this.update(weeklyKey,name,score),
+this.update(dailyKey,name,score)
+])
+
+},
+
+async update(key,name,score){
+
+const ref=db.ref("rankings/"+key)
+
+const snap=await ref.once("value")
+
+let current=snap.val()||[]
+
+const idx=current.findIndex(r=>r.name===name)
+
+if(idx!==-1){
+
+if(score>current[idx].score){
+
+current[idx].score=score
+current[idx].date=new Date().toISOString()
+
+}
+
+}else{
+
+current.push({name,score,date:new Date().toISOString()})
+
+}
+
+current.sort((a,b)=>b.score-a.score)
+
+current=current.slice(0,100)
+
+await ref.set(current)
+
+}
+
+}
+
+/* JOGO */
+
+const Engine={
+canvas:document.getElementById("world"),
+ctx:document.getElementById("world").getContext("2d"),
+birds:new Map(),
+pipes:[],
+state:"MENU",
+speed:4
+}
+
+/* BIRD */
+
+class Bird{
+
+constructor(id,name,color){
+
+this.id=id
+this.name=name
+this.color=color
+
+this.x=100
+this.y=300
+this.v=0
+this.dead=false
+
+}
+
+update(){
+
+if(this.dead)return
+
+this.v+=0.45
+this.y+=this.v
+
+if(this.y>window.innerHeight||this.y<0){
+this.dead=true
+App.die()
+}
+
+}
+
+flap(){
+
+this.v=-7.5
+
+}
+
+}
+
+/* APP MULTIPLAYER */
+
+const App={
+
+isHost:false,
+myId:"",
+myName:"",
+score:0,
+players:[],
+peers:[],
+
+hostRoom(){
+
+const code=Math.random().toString(36).substring(2,6).toUpperCase()
+
+this.peer=new Peer(code)
+
+this.peer.on("open",id=>{
+
+this.myId="host"
+this.isHost=true
+
+RoomsAPI.create(id,this.myName)
+
+this.players=[{id:"host",name:this.myName,color:"#FFD93D"}]
+
+UI.show("lobby-panel")
+
+document.getElementById("room-id").innerText="SALA: "+id
+
+document.getElementById("btn-start").style.display="block"
+
+})
+
+},
+
+joinRoom(id){
+
+this.peer=new Peer()
+
+this.peer.on("open",myId=>{
+
+this.myId=myId
+
+const conn=this.peer.connect(id)
+
+this.hostConn=conn
+
+conn.on("open",()=>{
+
+conn.send({type:"JOIN",name:this.myName})
+
+UI.show("lobby-panel")
+
+document.getElementById("room-id").innerText="SALA: "+id
+
+})
+
+conn.on("data",d=>this.handleData(d))
+
+})
+
+},
+
+startGame(){
+
+if(!this.isHost)return
+
+RoomsAPI.delete(this.peer.id)
+
+}
+
+}
+
+/* UI */
+
+const UI={
+
+show(id){
+
+document.querySelectorAll(".ui-panel").forEach(p=>p.classList.add("hidden"))
+
+if(id)document.getElementById(id).classList.remove("hidden")
+
+},
+
+startHost(){
+
+const n=document.getElementById("player-name").value
+
+if(!/^[a-zA-Z0-9]+$/.test(n))return alert("Nome inválido")
+
+App.myName=n
+
+App.hostRoom()
+
+},
+
+async listRooms(){
+
+const rooms=await RoomsAPI.list()
+
+let html="<h3>Salas:</h3>"
+
+rooms.forEach(r=>{
+html+=`<button onclick="App.joinRoom('${r.id}')">SALA DE ${r.hostName}</button>`
+})
+
+html+=`<button onclick="location.reload()">VOLTAR</button>`
+
+document.getElementById("menu-panel").innerHTML=html
+
+}
+
+}
+
 </script>
+
 </body>
 </html>
